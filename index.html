@@ -152,7 +152,7 @@ textarea.inp{ resize:vertical; min-height:64px; line-height:1.5 }
 .legend .over{ color:var(--flag); font-weight:600 }
 
 /* Turn rows */
-.row{ display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:4px 12px; align-items:start; padding:14px 0; border-bottom:1px solid var(--line-2) }
+.row{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; align-items:start; padding:14px 0; border-bottom:1px solid var(--line-2) }
 .row:first-child{ padding-top:0 }
 .row:last-child{ border-bottom:0; padding-bottom:0 }
 .row-title{ font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
@@ -167,8 +167,17 @@ textarea.inp{ resize:vertical; min-height:64px; line-height:1.5 }
 .x:hover{ color:var(--flag); background:var(--flag-soft) }
 .tag{ font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; padding:2px 7px; border-radius:999px; background:var(--jade-soft); color:var(--jade) }
 .tag.paused{ background:var(--amber-soft); color:var(--amber) }
-.edit-turn{ display:grid; gap:8px; margin-top:6px }
-.edit-turn .controls{ margin-top:0 }
+.edit-turn{ grid-column:1 / -1; margin-top:10px; padding:16px; border-radius:11px; background:var(--raise); border:1px solid var(--line) }
+.edit-turn .inp{ background:var(--card) }
+.edit-turn .controls{ margin-top:16px }
+.edit-turn .hint{ margin-top:2px; font-size:12.5px }
+.adj{ display:flex; flex-wrap:wrap; align-items:center; gap:8px }
+.adj .inp{ width:auto; padding:9px 11px }
+.adj select.inp{ padding-right:8px }
+.adj input[type="number"]{ width:68px }
+.adj input[type="date"]{ min-width:150px }
+.adj > span{ font-size:13px; color:var(--muted) }
+.confirm{ margin-top:12px }
 .confirm{ grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:10px 14px; flex-wrap:wrap; padding:10px 12px; margin-top:8px; border-radius:9px; background:var(--flag-soft); font-size:13.5px }
 .confirm .controls{ margin-top:0 }
 
@@ -278,6 +287,7 @@ function normalize(d) {
       if (typeof t.id !== 'string' || !/^[a-z0-9-]+$/i.test(t.id)) t.id = uid();
       t.desc = t.desc || '';
       t.done = !!t.done;
+      t.manual = Array.isArray(t.manual) ? t.manual.filter(m => m && typeof m.at === 'number' && typeof m.ms === 'number') : [];
       t.segments.forEach(g => { if (typeof g.e !== 'number') g.e = null; });
     });
   });
@@ -294,7 +304,7 @@ function load() {
     try { const d = JSON.parse(raw); if (valid(d)) return normalize(d); } catch (e) {}
     return { projects: [], settings: { chime: true, theme: 'system' } };
   }
-  return seed();
+  return normalize(seed());
 }
 function save() {
   if (!storageOK) return;
@@ -337,7 +347,8 @@ const ui = {
 const getP = id => state.projects.find(p => p.id === id);
 const lastSeg = t => t.segments[t.segments.length - 1];
 const isRunning = t => { const g = lastSeg(t); return !!g && g.e == null; };
-const turnMs = (t, n = now()) => t.segments.reduce((a, g) => a + ((g.e ?? n) - g.s), 0);
+const manualMs = t => (t.manual || []).reduce((a, m) => a + m.ms, 0);
+const turnMs = (t, n = now()) => Math.max(0, t.segments.reduce((a, g) => a + ((g.e ?? n) - g.s), 0) + manualMs(t));
 const projectMs = (p, n = now()) => p.turns.reduce((a, t) => a + turnMs(t, n), 0);
 const openTurn = p => p.turns.find(t => !t.done);
 function gapsMs(t) { let b = 0; for (let i = 1; i < t.segments.length; i++) b += Math.max(0, t.segments[i].s - (t.segments[i - 1].e ?? t.segments[i].s)); return b; }
@@ -385,6 +396,11 @@ function dailyTotals(projects, n = now()) {
       r.ms += b - s; r.names.add(p.name); s = b;
     }
   })));
+  projects.forEach(p => p.turns.forEach(t => (t.manual || []).forEach(m => {
+    const k = dayKey(m.at);
+    let r = map.get(k); if (!r) { r = { ms: 0, names: new Set() }; map.set(k, r); }
+    r.ms += m.ms; r.names.add(p.name);
+  })));
   return map;
 }
 function dayMs(projects, from, n = now()) {
@@ -392,7 +408,8 @@ function dayMs(projects, from, n = now()) {
   projects.forEach(p => p.turns.forEach(t => t.segments.forEach(g => {
     const s = Math.max(g.s, from), e = Math.min(g.e ?? n, to); if (e > s) ms += e - s;
   })));
-  return ms;
+  projects.forEach(p => p.turns.forEach(t => (t.manual || []).forEach(m => { if (m.at >= from && m.at < to) ms += m.ms; })));
+  return Math.max(0, ms);
 }
 const HOUR = 3600000;
 const heatLevel = ms => ms <= 0 ? 0 : ms < HOUR ? 1 : ms < 2 * HOUR ? 2 : ms < 4 * HOUR ? 3 : 4;
@@ -416,16 +433,16 @@ function heatmap(scope) {
       }
       const area = `grid-area:${d + 2}/${w + 2}`;
       if (ts > today) { cells += `<span class="hm-cell future" style="${area}"></span>`; continue; }
-      const k = dayKey(ts), r = map.get(k), ms = r ? r.ms : 0, isToday = ts === today;
+      const k = dayKey(ts), r = map.get(k), ms = r ? Math.max(0, r.ms) : 0, isToday = ts === today;
       if (ms > 0) { totalMs += ms; active++; }
-      const names = r ? [...r.names].join(', ') : '';
+      const names = r && ms > 0 ? [...r.names].join(', ') : '';
       cells += `<span class="hm-cell l${heatLevel(ms)}${isToday ? ' today' : ''}" style="${area}" data-day="${ts}" data-ms="${ms}" data-names="${esc(names)}"${isToday ? ` data-live="hm-today" data-scope="${scope}"` : ''} title="${esc(`${dayLabel(ts)}: ${fmtHM(ms)}`)}"></span>`;
     }
   }
   let streak = 0;
   for (let d = new Date(today); ; d.setDate(d.getDate() - 1)) {
     const r = map.get(dayKey(d.getTime()));
-    if (r && r.ms > 0) streak++;
+    if (r && Math.max(0, r.ms) > 0) streak++;
     else if (d.getTime() === today) continue;
     else break;
     if (streak > 400) break;
@@ -480,7 +497,7 @@ function pausedNote(other) { if (other) toast(`Paused ${other.p.name}, turn ${ot
 function startTurn(p, desc) {
   if (p.turns.length >= MAX_TURNS || openTurn(p)) return;
   const other = closeRunning();
-  p.turns.push({ id: uid(), desc: desc.trim(), createdAt: now(), done: false, segments: [{ s: now(), e: null }] });
+  p.turns.push({ id: uid(), desc: desc.trim(), createdAt: now(), done: false, manual: [], segments: [{ s: now(), e: null }] });
   ui.draftTurn = '';
   save(); render(); pausedNote(other);
 }
@@ -646,7 +663,6 @@ function viewProject(p) {
       <div class="sec-head"><span class="eyebrow">Turns</span><span class="eyebrow">${p.turns.length} of ${MAX_TURNS}</span></div>
       <div class="panel">${p.turns.length ? p.turns.map((t, i) => turnRow(p, t, i)).join('') : '<p class="empty">No turns yet. Start turn 1 above.</p>'}</div>
     </section>
-    ${heatmap(p.id)}
     <section class="sec">
       ${ui.editProject ? editProjectForm(p)
         : ui.confirm === 'project:' + p.id ? `<div class="panel">${confirmBox(`Delete ${esc(p.name)} and its ${plural(p.turns.length, 'turn')}? This can't be undone.`, 'delete-project', ids(p))}</div>`
@@ -715,32 +731,57 @@ function face(p) {
     </section>`;
 }
 
+function todayInput() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+
 function turnRow(p, t, i) {
   const n = now(), ms = turnMs(t, n), run = isRunning(t), first = t.segments[0], last = lastSeg(t);
   const tag = t.done ? '' : `<span class="tag${run ? '' : ' paused'}">${run ? 'Running' : 'Paused'}</span>`;
   const end = t.done ? (last && last.e) || t.finishedAt : null;
   const when = first ? `${fmtDay(first.s)}, ${fmtTime(first.s)}${end ? ` – ${fmtTime(end)}` : ''}` : fmtDay(t.createdAt);
-  const bc = breakCount(t);
-  const meta = `${when} · ${bc ? plural(bc, 'break') : 'no breaks'}`;
+  const bc = breakCount(t), mm = manualMs(t);
+  const meta = `${when} · ${bc ? plural(bc, 'break') : 'no breaks'}${mm ? ` · ${mm > 0 ? '+' : '−'}${fmtClock(Math.abs(mm))} entered by hand` : ''}`;
   const editing = ui.editTurn === t.id;
-  const isLast = i === p.turns.length - 1;
-  const desc = editing
-    ? `<form class="edit-turn" ${ids(p, t)}><label class="eyebrow" for="et-${t.id}">Description</label><textarea class="inp" id="et-${t.id}" rows="2">${esc(t.desc)}</textarea><div class="controls"><button class="btn sm primary" type="submit">Save</button><button type="button" class="btn sm" data-action="cancel-edit-turn">Cancel</button></div></form>`
-    : `<p class="row-desc${t.desc ? '' : ' empty'}" data-desc-for="${t.id}">${t.desc ? esc(t.desc) : 'No description'}</p>`;
-  const links = [];
-  if (t.done && !editing) links.push(`<button class="linkbtn" type="button" data-action="edit-turn" ${ids(p, t)}>Edit</button>`);
-  if (t.done && isLast && !openTurn(p)) links.push(`<button class="linkbtn" type="button" data-action="reopen" ${ids(p, t)}>Reopen</button>`);
+  const amt = `<div class="row-amt"><span data-live="turn-clock" ${ids(p, t)}>${fmtClock(ms)}</span><span class="row-over" data-live="turn-over" ${ids(p, t)}${ms > TURN_MS ? '' : ' hidden'}>+${fmtClock(ms - TURN_MS)}</span></div>`;
+
+  if (editing) {
+    const manualList = (t.manual || []).map(m => `${m.ms > 0 ? '+' : '−'}${fmtClock(Math.abs(m.ms))} on ${new Date(m.at).toLocaleDateString([], { month: 'short', day: 'numeric' })}`).join(', ');
+    return `
+      <div class="row editing">
+        <div><div class="row-title">Turn ${i + 1}${tag}</div><div class="row-meta">${esc(meta)}</div></div>
+        ${amt}
+        <form class="edit-turn" ${ids(p, t)} autocomplete="off">
+          <div class="field first"><label for="et-desc">Description</label><textarea class="inp" id="et-desc" rows="2">${esc(t.desc)}</textarea></div>
+          <div class="field">
+            <label for="et-h">Add time manually</label>
+            <div class="adj">
+              <select class="inp" id="et-sign" aria-label="Add or remove"><option value="1">Add</option><option value="-1">Remove</option></select>
+              <input class="inp num" type="number" id="et-h" min="0" max="24" step="1" inputmode="numeric" placeholder="0" aria-label="Hours"><span>h</span>
+              <input class="inp num" type="number" id="et-m" min="0" max="59" step="1" inputmode="numeric" placeholder="0" aria-label="Minutes"><span>m</span>
+              <span>on</span>
+              <input class="inp" type="date" id="et-date" value="${todayInput()}" max="${todayInput()}" aria-label="Day the work happened">
+            </div>
+            <p class="hint">For work done without the timer, or to fix a mistake. The time counts toward this turn and shows on the activity calendar on the day you pick.</p>
+            ${manualList ? `<p class="hint">Entered by hand so far: <span class="num">${esc(manualList)}</span> · <button class="linkbtn" type="button" data-action="clear-manual" ${ids(p, t)} style="font-size:12.5px;padding:2px">Clear</button></p>` : ''}
+          </div>
+          <div class="controls"><button class="btn sm primary" type="submit">Save</button><button type="button" class="btn sm" data-action="cancel-edit-turn">Cancel</button></div>
+          ${ui.confirm === 'turn:' + t.id
+            ? confirmBox(`Delete turn ${i + 1} (${fmtClock(ms)})? This can't be undone.`, 'delete-turn', ids(p, t))
+            : `<div class="row-links" style="margin-top:10px"><button class="linkbtn danger" type="button" data-action="ask-delete-turn" ${ids(p, t)}>Delete turn</button></div>`}
+        </form>
+      </div>`;
+  }
+
+  const links = [`<button class="linkbtn" type="button" data-action="edit-turn" ${ids(p, t)}>Edit</button>`];
+  if (t.done && i === p.turns.length - 1 && !openTurn(p)) links.push(`<button class="linkbtn" type="button" data-action="reopen" ${ids(p, t)}>Reopen</button>`);
   return `
     <div class="row">
       <div>
         <div class="row-title">Turn ${i + 1}${tag}</div>
-        ${desc}
+        <p class="row-desc${t.desc ? '' : ' empty'}" data-desc-for="${t.id}">${t.desc ? esc(t.desc) : 'No description'}</p>
         <div class="row-meta">${esc(meta)}</div>
-        ${links.length ? `<div class="row-links">${links.join('')}</div>` : ''}
+        <div class="row-links">${links.join('')}</div>
       </div>
-      <div class="row-amt"><span data-live="turn-clock" ${ids(p, t)}>${fmtClock(ms)}</span><span class="row-over" data-live="turn-over" ${ids(p, t)}${ms > TURN_MS ? '' : ' hidden'}>+${fmtClock(ms - TURN_MS)}</span></div>
-      <button class="x" type="button" data-action="ask-delete-turn" ${ids(p, t)} aria-label="Delete turn ${i + 1}">×</button>
-      ${ui.confirm === 'turn:' + t.id ? confirmBox(`Delete turn ${i + 1} (${fmtClock(ms)})?`, 'delete-turn', ids(p, t)) : ''}
+      ${amt}
     </div>`;
 }
 
@@ -935,10 +976,11 @@ document.addEventListener('click', e => {
     case 'reopen': if (p && t) reopen(p, t); break;
     case 'edit-project': ui.editProject = true; ui.confirm = null; render(); $('#ep-name')?.focus(); break;
     case 'cancel-edit-project': ui.editProject = false; render(); break;
-    case 'edit-turn': if (t) { ui.editTurn = t.id; render(); $('#et-' + t.id)?.focus(); } break;
+    case 'edit-turn': if (t) { ui.editTurn = t.id; ui.confirm = null; render(); $('#et-desc')?.focus(); } break;
+    case 'clear-manual': if (t) { t.manual = []; save(); render(); toast('Manual time cleared.'); } break;
     case 'cancel-edit-turn': ui.editTurn = null; render(); break;
     case 'ask-delete-turn': if (t) { ui.confirm = 'turn:' + t.id; render(); } break;
-    case 'delete-turn': if (p && t) { p.turns.splice(p.turns.indexOf(t), 1); ui.confirm = null; save(); render(); toast('Turn deleted.'); } break;
+    case 'delete-turn': if (p && t) { p.turns.splice(p.turns.indexOf(t), 1); ui.confirm = null; ui.editTurn = null; save(); render(); toast('Turn deleted.'); } break;
     case 'ask-delete-project': if (p) { ui.confirm = 'project:' + p.id; ui.editProject = false; render(); } break;
     case 'delete-project':
       if (p) { state.projects = state.projects.filter(x => x !== p); ui.confirm = null; save(); location.hash = ''; render(); toast(`Deleted ${p.name}.`); }
@@ -991,7 +1033,22 @@ document.addEventListener('submit', e => {
     if (p && name) { p.name = name; p.desc = $('#ep-desc').value.trim(); ui.editProject = false; save(); render(); }
   } else if (f.classList.contains('edit-turn')) {
     const p = getP(f.dataset.pid), t = p && p.turns.find(x => x.id === f.dataset.tid);
-    if (t) { t.desc = $('#et-' + t.id).value.trim(); ui.editTurn = null; save(); render(); }
+    if (!t) return;
+    t.desc = $('#et-desc').value.trim();
+    const h = Math.max(0, parseInt($('#et-h').value, 10) || 0), m = Math.max(0, parseInt($('#et-m').value, 10) || 0);
+    let amount = (h * 60 + m) * 60000, msg = 'Turn saved.';
+    if (amount > 0) {
+      const sign = $('#et-sign').value === '-1' ? -1 : 1;
+      const parts = ($('#et-date').value || todayInput()).split('-').map(Number);
+      let at = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1, 12).getTime();
+      if (!isFinite(at) || at > nextDayOf(now())) at = sodOf(now()) + 12 * HOUR;
+      if (sign < 0) amount = Math.min(amount, turnMs(t));
+      if (amount > 0) {
+        (t.manual = t.manual || []).push({ at, ms: sign * amount, addedAt: now() });
+        msg = `${sign > 0 ? 'Added' : 'Removed'} ${fmtClock(amount)} ${sign > 0 ? 'to' : 'from'} turn ${p.turns.indexOf(t) + 1}.`;
+      }
+    }
+    ui.editTurn = null; ui.confirm = null; primeAlerts(); save(); render(); toast(msg);
   }
 });
 
