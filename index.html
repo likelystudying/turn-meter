@@ -7,241 +7,228 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one 760px column on time-card stock; the five-slot hour meter repeats on every project as the signature element */
+/* Layout: one 720px column; white rounded cards on pale green-grey; the timer face with a 60-tick minute rail is the centrepiece */
 :root{
-  --paper:#EDEFE9;
-  --card:#FAFBF7;
-  --ink:#1A1E1B;
-  --muted:#59615C;
-  --rule:#D3D8CF;
-  --rule-strong:#A9B1A6;
-  --accent:#2E45B4;
-  --accent-ink:#FFFFFF;
-  --run:#177A4B; --run-soft:#D6ECDD;
-  --pause:#8A5508; --pause-soft:#F4E5C6;
-  --over:#B3302A; --over-soft:#F5DAD5;
-  --shadow:rgba(20,24,22,.16);
-  --f-display:"Archivo","Arial Narrow","Helvetica Neue",Arial,sans-serif;
-  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --paper:#F1F3EF; --card:#FFFFFF; --raise:#F7F9F5;
+  --ink:#101613; --ink-2:#3C4742; --muted:#6B7871; --faint:#B4BEB8;
+  --line:#E2E7E0; --line-2:#EDF0EA; --line-hi:#CBD6CE;
+  --jade:#0F7B5A; --jade-hi:#12946B; --jade-soft:#DCEFE5; --jade-tick:#A5D8C1; --on-jade:#FFFFFF;
+  --flag:#C2493C; --flag-soft:#FBEAE7; --flag-line:#EBD7D4;
+  --amber:#93661F; --amber-soft:#F4EBD8; --amber-line:#E3D3B0;
+  --inverse:#101613; --on-inverse:#F1F3EF;
+  --heat-0:#E8ECE6; --heat-1:#DCEFE5; --heat-2:#A5D8C1; --heat-3:#4FA986; --heat-4:#0F7B5A;
+  --shadow:0 1px 2px rgba(16,22,19,.05), 0 10px 30px rgba(16,22,19,.06);
+  --sans:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:'DM Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --paper:#111412; --card:#191D1A; --ink:#E6EAE4; --muted:#9AA39C; --rule:#2A302C; --rule-strong:#46504A;
-    --accent:#93A2F7; --accent-ink:#0D1233;
-    --run:#52C48C; --run-soft:#16331F; --pause:#E2A64C; --pause-soft:#382A12; --over:#F0766A; --over-soft:#3D1F1B;
-    --shadow:rgba(0,0,0,.5);
+    --paper:#0E1210; --card:#161A17; --raise:#1C211D;
+    --ink:#E7EDE9; --ink-2:#BCC6C0; --muted:#8C968F; --faint:#5E6863;
+    --line:#282E2A; --line-2:#20251F; --line-hi:#3A423C;
+    --jade:#18A87A; --jade-hi:#22C08D; --jade-soft:#12332A; --jade-tick:#1A6046; --on-jade:#04140E;
+    --flag:#E4796A; --flag-soft:#38211E; --flag-line:#4C2B26;
+    --amber:#D6A54A; --amber-soft:#332918; --amber-line:#4A3C22;
+    --inverse:#E7EDE9; --on-inverse:#0E1210;
+    --heat-0:#20251F; --heat-1:#14332A; --heat-2:#1A6046; --heat-3:#1F8F68; --heat-4:#2AC294;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
-  --paper:#111412; --card:#191D1A; --ink:#E6EAE4; --muted:#9AA39C; --rule:#2A302C; --rule-strong:#46504A;
-  --accent:#93A2F7; --accent-ink:#0D1233;
-  --run:#52C48C; --run-soft:#16331F; --pause:#E2A64C; --pause-soft:#382A12; --over:#F0766A; --over-soft:#3D1F1B;
-  --shadow:rgba(0,0,0,.5);
+  --paper:#0E1210; --card:#161A17; --raise:#1C211D;
+  --ink:#E7EDE9; --ink-2:#BCC6C0; --muted:#8C968F; --faint:#5E6863;
+  --line:#282E2A; --line-2:#20251F; --line-hi:#3A423C;
+  --jade:#18A87A; --jade-hi:#22C08D; --jade-soft:#12332A; --jade-tick:#1A6046; --on-jade:#04140E;
+  --flag:#E4796A; --flag-soft:#38211E; --flag-line:#4C2B26;
+  --amber:#D6A54A; --amber-soft:#332918; --amber-line:#4A3C22;
+  --inverse:#E7EDE9; --on-inverse:#0E1210;
+  --heat-0:#20251F; --heat-1:#14332A; --heat-2:#1A6046; --heat-3:#1F8F68; --heat-4:#2AC294;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
   color-scheme:dark;
 }
 
 *,*::before,*::after{ box-sizing:border-box }
 [hidden]{ display:none !important }
 html{ -webkit-text-size-adjust:100% }
-body{ margin:0; background:var(--paper); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.5 }
+body{ margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased }
+p,h1,h2{ margin:0 }
 button,input,textarea{ font:inherit; color:inherit }
-p{ margin:0 }
+:is(button,a,input,textarea):focus-visible{ outline:2px solid var(--jade); outline-offset:2px }
 
 .wrap{
-  max-width:760px; margin:0 auto;
+  max-width:720px; margin:0 auto;
   padding-left:max(16px, env(safe-area-inset-left, 0px));
   padding-right:max(16px, env(safe-area-inset-right, 0px));
-  padding-block:20px 48px;
+  padding-block:26px 80px;
 }
-body.has-runbar .wrap{ padding-bottom:120px }
-
-h1,h2{ font-family:var(--f-display); font-stretch:78%; font-weight:700; line-height:1.05; margin:0; text-wrap:balance; letter-spacing:-0.005em }
-h1{ font-size:clamp(32px, 7vw, 42px) }
-h2{ font-size:23px }
-.eyebrow{ font-family:var(--f-mono); font-size:11.5px; font-weight:500; letter-spacing:.09em; text-transform:uppercase; color:var(--muted) }
-.mono{ font-family:var(--f-mono); font-variant-numeric:tabular-nums }
-.muted{ color:var(--muted) }
-.lede{ color:var(--muted); max-width:62ch; font-size:15.5px; white-space:pre-wrap; overflow-wrap:anywhere }
-.sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap }
-.row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+.eyebrow{ font-weight:600; text-transform:uppercase; letter-spacing:.1em; font-size:10.5px; color:var(--muted) }
+.num{ font-family:var(--mono); font-variant-numeric:tabular-nums }
 
 /* Top bar */
-.top{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:14px; border-bottom:1px solid var(--rule); margin-bottom:28px }
-.brand{ display:inline-flex; align-items:center; gap:10px; font-family:var(--f-mono); font-size:13px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--ink); text-decoration:none }
-.brand-mark{ display:grid; grid-template-columns:repeat(5,4px); gap:2px; align-items:end; height:16px }
-.brand-mark i{ display:block; background:var(--accent); border-radius:1px }
-.brand-mark i:nth-child(1){ height:6px } .brand-mark i:nth-child(2){ height:9px } .brand-mark i:nth-child(3){ height:12px }
-.brand-mark i:nth-child(4){ height:14px } .brand-mark i:nth-child(5){ height:16px }
-.top-meta{ font-size:12px; color:var(--muted) }
+.topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:26px }
+.mark{ font-weight:700; letter-spacing:-.02em; font-size:19px; color:var(--ink); text-decoration:none }
+.linkbtn{ background:none; border:0; color:var(--muted); font-family:inherit; font-weight:600; font-size:13px; cursor:pointer; padding:7px 4px; border-radius:6px; text-decoration:none }
+.linkbtn:hover{ color:var(--jade) }
+.linkbtn.danger:hover{ color:var(--flag) }
+.top-note{ font-size:12.5px; color:var(--muted) }
 
-#view{ display:grid; gap:28px }
+/* Running strip */
+.runbar{ display:flex; align-items:center; gap:10px; margin-bottom:16px; padding:9px 12px; border:1px solid var(--jade); border-radius:11px; background:var(--jade-soft) }
+.runbar-dot{ width:8px; height:8px; border-radius:999px; background:var(--jade); flex:none; animation:breathe 2s ease-in-out infinite }
+.runbar-what{ flex:1 1 auto; min-width:0; display:flex; align-items:baseline; gap:8px; color:inherit; text-decoration:none }
+.runbar-name{ font-weight:600; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.runbar-what:hover .runbar-name{ text-decoration:underline; text-underline-offset:2px }
+.runbar-turn{ font-size:12px; color:var(--ink-2); white-space:nowrap }
+.runbar-time{ font-family:var(--mono); font-size:13px; white-space:nowrap }
+.runbar-btn{ font-family:inherit; font-weight:600; font-size:12px; padding:5px 12px; border:1px solid var(--jade); border-radius:7px; background:var(--card); color:var(--jade); cursor:pointer; white-space:nowrap }
+.runbar-btn:hover{ background:var(--jade); color:var(--on-jade) }
+@media (max-width:420px){ .runbar-turn{ display:none } }
 
-/* Buttons */
-.btn{
-  appearance:none; display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  min-height:42px; padding:0 16px; border:1px solid var(--rule-strong); border-radius:6px;
-  background:var(--card); color:var(--ink); font:500 14.5px/1 var(--f-body);
-  cursor:pointer; text-decoration:none; white-space:nowrap; transition:border-color .15s, background-color .15s, filter .15s;
-}
-.btn:hover{ border-color:var(--ink) }
-.btn svg{ width:15px; height:15px; fill:currentColor; flex:none }
-.btn-primary{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink) }
-.btn-primary:hover{ border-color:var(--accent); filter:brightness(1.08) }
-.btn-lg{ min-height:52px; padding:0 22px; font-size:16px }
-.btn-ghost{ background:transparent; border-color:transparent; color:var(--muted); padding:0 8px; min-height:34px; font-size:13.5px }
-.btn-ghost:hover{ border-color:transparent; color:var(--ink) }
-.btn-danger{ color:var(--over) }
-.btn-danger:hover{ color:var(--over); text-decoration:underline }
-.btn-danger-solid{ background:var(--over); border-color:var(--over); color:var(--card) }
-.btn-danger-solid:hover{ border-color:var(--over); filter:brightness(1.06) }
-:is(.btn, a, input, textarea, summary):focus-visible{ outline:2px solid var(--accent); outline-offset:2px }
+/* Timer face */
+.face{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:26px 24px 22px; box-shadow:var(--shadow) }
+.face-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:22px }
+.face-top > div{ min-width:0 }
+.plate-name{ font-weight:700; font-size:20px; letter-spacing:-.02em; line-height:1.15; overflow-wrap:anywhere }
+.plate-sub{ margin-top:5px; font-size:13.5px; color:var(--muted); white-space:pre-wrap; overflow-wrap:anywhere }
+.state{ font-weight:600; text-transform:uppercase; letter-spacing:.09em; font-size:10px; padding:6px 11px; border-radius:999px; background:var(--line-2); color:var(--muted); white-space:nowrap }
+.state.on{ background:var(--jade-soft); color:var(--jade) }
+.state.paused{ background:var(--amber-soft); color:var(--amber) }
+.clock{ margin-top:8px; font-family:var(--mono); font-weight:500; font-size:clamp(44px, 13vw, 64px); font-variant-numeric:tabular-nums; letter-spacing:-.035em; line-height:1 }
+.clock.idle{ color:var(--faint) }
+.clock.over{ color:var(--flag) }
+.clock-note{ margin-top:10px; font-size:13px; color:var(--muted) }
+.clock-note.over{ color:var(--flag) }
+.clock-note.brk{ color:var(--amber) }
 
-/* Forms */
-.field{ display:grid; gap:6px }
-.field label{ font-size:13px; font-weight:500; color:var(--muted) }
-input[type="text"], textarea{
-  width:100%; background:var(--card); border:1px solid var(--rule-strong); border-radius:6px;
-  padding:10px 12px; line-height:1.45;
-}
-textarea{ resize:vertical; min-height:76px }
-input::placeholder, textarea::placeholder{ color:var(--muted); opacity:.75 }
+.rail{ display:flex; gap:2px; margin-top:22px; height:20px; align-items:flex-end }
+.tick{ flex:1; background:var(--line); border-radius:2px; height:6px; transition:height .25s, background-color .25s }
+.tick.q{ height:10px }
+.tick.filled{ background:var(--jade-tick); height:11px }
+.tick.head{ background:var(--jade); height:20px; animation:breathe 2s ease-in-out infinite }
+.tick.head.still{ background:var(--amber); animation:none }
+.tick.over{ background:var(--flag-line); height:11px }
+.rail-legend{ display:flex; justify-content:space-between; margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--muted) }
 
-.panel{ background:var(--card); border:1px solid var(--rule); border-radius:10px; padding:20px; display:grid; gap:18px }
-.panel-head{ display:flex; justify-content:space-between; align-items:center; gap:12px }
+/* Forms and buttons */
+.field{ display:grid; gap:7px; margin-top:20px }
+.field > label{ font-weight:600; text-transform:uppercase; letter-spacing:.1em; font-size:10.5px; color:var(--muted) }
+.field.first{ margin-top:0 }
+.inp{ width:100%; background:var(--raise); border:1px solid var(--line); border-radius:9px; padding:11px 13px; color:var(--ink); font-size:14.5px }
+.inp:focus{ border-color:var(--jade); background:var(--card); outline:none }
+textarea.inp{ resize:vertical; min-height:64px; line-height:1.5 }
+.inp::placeholder{ color:var(--faint) }
+.saved{ font-size:12px; color:var(--muted); min-height:1.2em }
 
-/* Chips */
-.chip{
-  display:inline-flex; align-items:center; gap:6px; font-family:var(--f-mono); font-size:11px; font-weight:500;
-  letter-spacing:.07em; text-transform:uppercase; padding:3px 8px; border-radius:999px;
-  background:var(--paper); color:var(--muted); border:1px solid var(--rule); white-space:nowrap; line-height:1.4;
-}
-.chip-run{ background:var(--run-soft); color:var(--run); border-color:transparent }
-.chip-run::before{ content:""; width:7px; height:7px; border-radius:50%; background:currentColor; animation:pulse 1.6s ease-in-out infinite }
-.chip-pause{ background:var(--pause-soft); color:var(--pause); border-color:transparent }
-.chip-over{ background:var(--over-soft); color:var(--over); border-color:transparent }
-.chip-sample{ border-style:dashed }
-.chips{ display:inline-flex; gap:6px; flex-wrap:wrap }
-@keyframes pulse{ 50%{ opacity:.3 } }
+.controls{ display:flex; gap:9px; margin-top:22px; flex-wrap:wrap }
+.btn{ font-family:inherit; font-weight:600; font-size:14px; padding:12px 20px; border-radius:9px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; flex:1; min-width:112px; transition:background-color .15s, border-color .15s, color .15s }
+.btn:hover{ background:var(--raise); border-color:var(--line-hi) }
+.btn.primary{ background:var(--jade); color:var(--on-jade); border-color:var(--jade) }
+.btn.primary:hover{ background:var(--jade-hi); border-color:var(--jade-hi) }
+.btn.danger{ color:var(--flag); border-color:var(--flag-line) }
+.btn.danger:hover{ background:var(--flag-soft); border-color:var(--flag) }
+.btn.sm{ flex:0 0 auto; min-width:0; padding:8px 14px; font-size:13px }
+
+/* Sections */
+.sec{ margin-top:30px }
+.sec-head{ display:flex; justify-content:space-between; align-items:center; gap:12px; padding:0 2px 12px }
+.sec-head .num{ font-size:11px; color:var(--muted) }
+.panel{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:var(--shadow) }
+.hint{ font-size:13px; color:var(--muted); line-height:1.55 }
+.empty{ text-align:center; padding:14px 8px; color:var(--muted); font-size:13.5px }
+
+/* Five-turn bar */
+.util{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:12px }
+.util-val{ font-family:var(--mono); font-size:22px; font-variant-numeric:tabular-nums }
+.util-of{ font-size:12.5px; color:var(--muted) }
+.split{ display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:3px }
+.seg{ position:relative; height:7px; border-radius:999px; background:var(--line-2); overflow:hidden }
+.seg .fill{ position:absolute; inset:0 auto 0 0; width:0; border-radius:999px; background:var(--jade); transition:width .5s ease }
+.seg.paused .fill{ background:var(--amber) }
+.seg.over .fill{ background:var(--flag) }
+.legend{ display:flex; justify-content:space-between; gap:6px 12px; flex-wrap:wrap; margin-top:10px; font-size:12px; color:var(--muted) }
+.legend .over{ color:var(--flag); font-weight:600 }
+
+/* Turn rows */
+.row{ display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:4px 12px; align-items:start; padding:14px 0; border-bottom:1px solid var(--line-2) }
+.row:first-child{ padding-top:0 }
+.row:last-child{ border-bottom:0; padding-bottom:0 }
+.row-title{ font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+.row-desc{ font-size:14px; color:var(--ink-2); margin-top:2px; white-space:pre-wrap; overflow-wrap:anywhere }
+.row-desc.empty{ color:var(--faint) }
+.row-meta{ font-size:12px; color:var(--muted); margin-top:4px }
+.row-links{ display:flex; gap:10px; margin-top:2px; margin-left:-4px }
+.row-links .linkbtn{ font-size:12px; padding:4px }
+.row-amt{ font-family:var(--mono); font-size:15px; font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap }
+.row-over{ display:block; font-family:var(--mono); font-size:11.5px; color:var(--flag) }
+.x{ background:none; border:0; color:var(--faint); cursor:pointer; font-size:18px; line-height:1; padding:2px 6px 6px; border-radius:6px; margin-top:-2px }
+.x:hover{ color:var(--flag); background:var(--flag-soft) }
+.tag{ font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; padding:2px 7px; border-radius:999px; background:var(--jade-soft); color:var(--jade) }
+.tag.paused{ background:var(--amber-soft); color:var(--amber) }
+.edit-turn{ display:grid; gap:8px; margin-top:6px }
+.edit-turn .controls{ margin-top:0 }
+.confirm{ grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:10px 14px; flex-wrap:wrap; padding:10px 12px; margin-top:8px; border-radius:9px; background:var(--flag-soft); font-size:13.5px }
+.confirm .controls{ margin-top:0 }
 
 /* Home */
-.intro{ display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap }
-.intro-text{ display:grid; gap:6px; min-width:0 }
-.notice{ display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; padding:12px 14px; border:1px dashed var(--rule-strong); border-radius:8px; font-size:14px; color:var(--muted) }
-.notice.warn{ border-style:solid; border-color:var(--pause); color:var(--ink); background:var(--pause-soft) }
-.plist{ list-style:none; margin:0; padding:0; display:grid; gap:12px }
-.pcard > a{ display:grid; gap:12px; padding:18px 18px 16px; background:var(--card); border:1px solid var(--rule); border-radius:10px; color:inherit; text-decoration:none; transition:border-color .15s }
-.pcard > a:hover{ border-color:var(--rule-strong) }
-.pcard-head{ display:flex; align-items:baseline; justify-content:space-between; gap:8px 12px; flex-wrap:wrap }
-.pcard-head h2{ min-width:0; overflow-wrap:anywhere }
-.pcard .desc{ color:var(--muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere }
-.pcard-foot{ display:flex; justify-content:space-between; gap:6px 12px; flex-wrap:wrap; font-size:13px; color:var(--muted) }
-.pcard-foot b{ color:var(--ink); font-weight:600 }
+.grand{ margin-bottom:24px }
+.grand-amt{ font-family:var(--mono); font-size:clamp(34px, 9vw, 48px); font-variant-numeric:tabular-nums; letter-spacing:-.035em; line-height:1.05; margin-top:8px }
+.grand-sub{ font-size:13px; color:var(--muted); margin-top:6px }
+.banner{ display:flex; align-items:center; justify-content:space-between; gap:10px 14px; flex-wrap:wrap; border:1px solid var(--amber-line); background:var(--amber-soft); border-radius:14px; padding:14px 16px; margin-bottom:20px; font-size:13.5px; color:var(--ink-2) }
+.banner .btn{ background:var(--card) }
+.cards{ list-style:none; margin:0; padding:0; display:grid; gap:10px }
+.card{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:0 14px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px; color:inherit; text-decoration:none; box-shadow:var(--shadow); transition:border-color .15s, transform .15s }
+.card:hover{ border-color:var(--line-hi); transform:translateY(-1px) }
+.card-name{ display:block; font-weight:700; font-size:17px; letter-spacing:-.015em; overflow-wrap:anywhere }
+.card-meta{ display:block; font-size:12.5px; color:var(--muted); margin-top:4px }
+.card-amt{ display:block; font-family:var(--mono); font-size:17px; font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap }
+.card-dur{ display:block; font-size:12px; color:var(--muted); margin-top:4px; text-align:right; white-space:nowrap }
+.card .split{ grid-column:1 / -1; margin-top:14px }
+.card .seg{ height:5px }
+.dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--jade); margin-right:8px; vertical-align:middle; animation:breathe 2s ease-in-out infinite }
+.dot.paused{ background:var(--amber); animation:none }
+.check{ display:inline-flex; gap:8px; align-items:center; cursor:pointer; font-size:13px; color:var(--muted) }
+.check input{ width:16px; height:16px; margin:0; accent-color:var(--jade) }
+.foot{ margin-top:40px; display:flex; flex-direction:column; align-items:center; gap:12px }
+.theme{ display:flex; gap:2px; padding:2px; border-radius:999px; background:var(--line-2) }
+.theme-btn{ display:grid; place-items:center; width:32px; height:32px; padding:0; border:0; border-radius:999px; background:none; color:var(--muted); cursor:pointer; transition:color .12s, background-color .12s }
+.theme-btn:hover{ color:var(--ink-2) }
+.theme-btn.on{ background:var(--card); color:var(--jade); box-shadow:0 1px 2px rgba(16,22,19,.07) }
+.theme-btn svg{ width:15px; height:15px }
 
-/* Meter */
-.meter{ display:grid; gap:6px }
-.meter-scale, .meter-track, .meter-legend{ display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:4px }
-.meter-scale > span{ font-family:var(--f-mono); font-size:10.5px; color:var(--muted) }
-.meter-scale > span:last-child{ display:flex; justify-content:space-between }
-.slot{ position:relative; height:16px; border-radius:3px; background:var(--rule); overflow:hidden }
-.slot.empty{ background:transparent; border:1px dashed var(--rule-strong) }
-.slot .fill{ position:absolute; inset:0 auto 0 0; width:0; background:var(--ink); transition:width .4s linear }
-.slot.run .fill{ background:var(--run) }
-.slot.pause .fill{ background:var(--pause) }
-.slot.over::after{ content:""; position:absolute; right:0; top:0; bottom:0; width:5px; background:var(--over) }
-.meter.compact .slot{ height:8px }
-.meter-legend > span{ display:grid; gap:1px; font-family:var(--f-mono); font-size:10.5px; color:var(--muted); min-width:0 }
-.meter-legend b{ font-weight:500; font-size:12px; color:var(--ink); font-variant-numeric:tabular-nums }
-.meter-legend b.over{ color:var(--over) }
-.meter-legend b.dim{ color:var(--muted); font-weight:400 }
+/* Activity calendar */
+.hm-top{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:14px }
+.hm-read{ font-family:var(--mono); font-size:11.5px; color:var(--muted); text-align:right; font-variant-numeric:tabular-nums }
+.hm-read.on{ color:var(--ink-2) }
+.hm-scroll{ overflow-x:auto; padding-bottom:4px; scrollbar-width:thin }
+.hm-grid{ display:grid; grid-template-columns:26px repeat(53, minmax(8px, 1fr)); grid-template-rows:auto; gap:3px; min-width:calc(26px + 53 * 11px) }
+.hm-month{ width:0; overflow:visible; white-space:nowrap; font-family:var(--mono); font-size:10px; color:var(--muted); line-height:1.3 }
+.hm-gut{ position:sticky; left:0; z-index:1; background:var(--card); box-shadow:3px 0 0 var(--card) }
+.hm-day{ position:sticky; left:0; z-index:2; font-family:var(--mono); font-size:9.5px; color:var(--muted); line-height:1; align-self:center }
+.hm-cell{ display:block; aspect-ratio:1 / 1; border-radius:2px; background:var(--heat-0) }
+.hm-cell.l1{ background:var(--heat-1) } .hm-cell.l2{ background:var(--heat-2) }
+.hm-cell.l3{ background:var(--heat-3) } .hm-cell.l4{ background:var(--heat-4) }
+.hm-cell.today{ box-shadow:0 0 0 1.5px var(--ink) inset }
+.hm-cell.future{ background:transparent }
+.hm-cell[data-day]{ cursor:pointer }
+.hm-cell[data-day]:hover, .hm-cell.picked{ outline:1.5px solid var(--ink); outline-offset:1px }
+.hm-foot{ display:flex; justify-content:space-between; align-items:center; gap:10px 16px; flex-wrap:wrap; margin-top:14px; font-size:12px; color:var(--muted) }
+.hm-key{ display:flex; align-items:center; gap:3px; font-family:var(--mono); font-size:10.5px }
+.hm-key .hm-cell{ width:10px; height:10px; aspect-ratio:auto }
+.hm-key span:first-child{ margin-right:4px } .hm-key span:last-child{ margin-left:4px }
+.hm-stats{ display:flex; gap:6px 14px; flex-wrap:wrap }
+.hm-stats b{ font-family:var(--mono); font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums }
+.backup-in{ font-family:var(--mono); font-size:12px }
 
-/* Project page */
-.crumbs{ margin:-10px 0 -14px -8px }
-.phead{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap }
-.phead-text{ display:grid; gap:8px; min-width:0; flex:1 1 300px }
-.phead-text h1{ overflow-wrap:anywhere }
-.budget{ display:grid; gap:16px }
-.stats{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:10px; overflow:hidden }
-.stat{ background:var(--card); padding:12px 14px; display:grid; gap:2px; align-content:start }
-.stat .k{ font-family:var(--f-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted) }
-.stat .v{ font-family:var(--f-mono); font-variant-numeric:tabular-nums; font-size:21px; font-weight:500; line-height:1.25 }
-.stat .s{ font-size:12px; color:var(--muted) }
-.stat.over .k, .stat.over .v{ color:var(--over) }
+.toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(24px + env(safe-area-inset-bottom, 0px)); z-index:50; background:var(--inverse); color:var(--on-inverse); border-radius:11px; padding:13px 16px; font-size:13.5px; box-shadow:0 12px 32px rgba(16,22,19,.22); width:max-content; max-width:calc(100vw - 32px) }
 
-.active-head{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap }
-.clock-block{ display:grid; gap:6px }
-.clock{ font-family:var(--f-mono); font-variant-numeric:tabular-nums; font-weight:500; font-size:clamp(50px, 14vw, 84px); line-height:1; letter-spacing:-0.035em }
-.clock.over{ color:var(--over) }
-.clock-sub{ font-family:var(--f-mono); font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums }
-.clock-sub.over{ color:var(--over) }
-.clock-sub.brk{ color:var(--pause) }
-.controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
-.hint{ font-size:12.5px; color:var(--muted) }
-.kbd{ font-family:var(--f-mono); font-size:11px; border:1px solid var(--rule-strong); border-bottom-width:2px; padding:1px 6px; border-radius:4px; margin-right:4px }
-@media (hover:none){ .hint-key{ display:none } }
-.saved{ font-size:12px; color:var(--muted); min-height:1em }
-
-.log{ display:grid; gap:12px }
-.log-head{ display:flex; justify-content:space-between; align-items:baseline; gap:12px }
-.tlist{ list-style:none; margin:0; padding:0; border-top:1px solid var(--rule) }
-.trow{ display:grid; grid-template-columns:34px minmax(0,1fr) auto; gap:4px 14px; padding:14px 0 10px; border-bottom:1px solid var(--rule); align-items:start }
-.tnum{ font-family:var(--f-mono); font-size:13px; color:var(--muted); padding-top:2px }
-.tmain{ display:grid; gap:4px; min-width:0 }
-.tdesc{ white-space:pre-wrap; overflow-wrap:anywhere }
-.tdesc.empty{ color:var(--muted); font-style:italic }
-.tmeta{ font-size:12.5px; color:var(--muted) }
-.tmeta .chip{ margin-right:8px; vertical-align:1px; padding:1px 7px; font-size:10.5px }
-.ttime{ display:grid; justify-items:end; font-family:var(--f-mono); font-variant-numeric:tabular-nums; font-weight:500 }
-.over-note{ font-size:11.5px; font-weight:400; color:var(--over) }
-.tfoot{ grid-column:2 / -1; display:flex; justify-content:space-between; align-items:flex-start; gap:4px 12px; flex-wrap:wrap }
-.tactions{ display:flex; gap:2px; flex-wrap:wrap; margin-left:-8px }
-.tfoot .confirm{ flex:1 1 100% }
-details.segs{ font-size:13px; padding-top:7px }
-details.segs summary{ cursor:pointer; color:var(--muted); font-size:12.5px }
-.seglist{ list-style:none; padding:6px 0 2px; margin:0; display:grid; gap:2px; font-family:var(--f-mono); font-size:12px; color:var(--ink); font-variant-numeric:tabular-nums }
-.seglist li{ display:flex; justify-content:space-between; gap:16px; min-width:220px }
-.seglist li.brk{ color:var(--pause) }
-.edit-turn{ display:grid; gap:8px }
-
-.confirm{ display:flex; align-items:center; justify-content:space-between; gap:10px 14px; flex-wrap:wrap; padding:10px 12px; border-radius:8px; background:var(--over-soft); font-size:14px }
-
-/* Footer */
-.foot{ margin-top:44px; padding-top:16px; border-top:1px solid var(--rule); display:grid; gap:14px; font-size:13.5px; color:var(--muted) }
-.check{ display:inline-flex; gap:8px; align-items:center; cursor:pointer; color:var(--ink) }
-.check input{ width:16px; height:16px; margin:0; accent-color:var(--accent) }
-.backup summary{ cursor:pointer; color:var(--ink); font-weight:500 }
-.backup-body{ display:grid; gap:12px; padding-top:12px; max-width:62ch }
-#backup-in{ font-family:var(--f-mono); font-size:12px }
-
-/* Running bar */
-#runbar{
-  position:fixed; left:0; right:0; bottom:0; z-index:20; background:var(--ink); color:var(--paper);
-  padding-top:10px; padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
-  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px));
-  box-shadow:0 -6px 24px var(--shadow);
-}
-.runbar-in{ max-width:728px; margin:0 auto; display:flex; align-items:center; gap:12px }
-.runbar-dot{ width:9px; height:9px; border-radius:50%; background:var(--run); flex:none; animation:pulse 1.6s ease-in-out infinite }
-.runbar-txt{ flex:1; min-width:0; display:grid; color:inherit; text-decoration:none; line-height:1.3 }
-.runbar-name{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.runbar-sub{ font-size:12px; opacity:.75 }
-.runbar-clock{ font-size:20px; font-weight:500 }
-#runbar .btn{ background:transparent; color:inherit; border-color:currentColor; min-height:38px; padding:0 12px }
-
-#toast{
-  position:fixed; left:50%; transform:translateX(-50%); top:calc(12px + env(safe-area-inset-top, 0px)); z-index:30;
-  background:var(--ink); color:var(--paper); padding:10px 16px; border-radius:8px; font-size:14px;
-  width:max-content; max-width:calc(100vw - 32px); box-shadow:0 8px 28px var(--shadow);
-}
-
-@media (max-width:560px){
-  .stats{ grid-template-columns:repeat(2, minmax(0,1fr)) }
+@keyframes breathe{ 0%,100%{ opacity:1 } 50%{ opacity:.35 } }
+@media (max-width:480px){
+  .face{ padding:22px 18px 18px }
   .panel{ padding:16px }
-  .controls .btn-lg{ flex:1 1 140px }
-  .runbar-clock{ font-size:17px }
+  .card{ padding:16px }
 }
 @media (prefers-reduced-motion: reduce){
   *, *::before, *::after{ animation:none !important; transition:none !important }
@@ -250,27 +237,12 @@ details.segs summary{ cursor:pointer; color:var(--muted); font-size:12.5px }
 </head>
 <body>
 <div class="wrap">
-  <header class="top">
-    <a class="brand" href="#"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>Turn Meter</a>
-    <span class="top-meta mono">5 turns × 60 min</span>
-  </header>
-  <div id="storage-warn" class="notice warn" hidden style="margin-bottom:20px">This browser is blocking storage, so projects will be lost when you close the page. Use Backup below to keep a copy.</div>
+  <div id="runbar"></div>
+  <header class="topbar" id="topbar"></header>
   <main id="view"></main>
-  <footer class="foot">
-    <label class="check" for="chime"><input type="checkbox" id="chime"> Chime when a turn reaches 60 minutes or a project reaches 5 hours</label>
-    <details class="backup" id="backup">
-      <summary>Backup and restore</summary>
-      <div class="backup-body">
-        <p>Projects are saved in this browser only. Copy a backup to keep it safe or to move it to another browser or device.</p>
-        <div class="row"><button class="btn" type="button" data-action="copy-backup">Copy backup</button><span id="copy-note" class="muted" aria-live="polite"></span></div>
-        <div class="field"><label for="backup-in">Paste a backup here to restore it</label><textarea id="backup-in" rows="4" spellcheck="false" placeholder='{"projects":[ ... ]}'></textarea></div>
-        <div id="restore-zone"><button class="btn" type="button" data-action="ask-restore">Restore</button></div>
-      </div>
-    </details>
-  </footer>
+  <footer class="foot" id="foot"></footer>
 </div>
-<div id="runbar" hidden></div>
-<div id="toast" role="status" aria-live="polite" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script>
 (() => {
@@ -288,14 +260,6 @@ const uid = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(3
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const ids = (p, t) => `data-pid="${p.id}"${t ? ` data-tid="${t.id}"` : ''}`;
 
-const ICON = {
-  play: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9.5-5.5z"/></svg>',
-  pause: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h3.2v11H3.5zM9.3 2.5h3.2v11H9.3z"/></svg>',
-  check: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 11.3 2.8 7.9 1.7 9l4.5 4.5 8.6-8.6-1.1-1.1z"/></svg>',
-  plus: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7.25 2.5h1.5v4.75h4.75v1.5H8.75v4.75h-1.5V8.75H2.5v-1.5h4.75z"/></svg>',
-  back: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.4 2.4 4.8 8l5.6 5.6 1.1-1.1L7 8l4.5-4.5z"/></svg>'
-};
-
 /* ---------- Storage ---------- */
 let storageOK = true;
 
@@ -305,7 +269,7 @@ function valid(d) {
     p.turns.every(t => t && Array.isArray(t.segments) && t.segments.every(g => g && typeof g.s === 'number')));
 }
 function normalize(d) {
-  d.settings = Object.assign({ chime: true }, d.settings || {});
+  d.settings = Object.assign({ chime: true, theme: 'system' }, d.settings || {});
   d.projects.forEach(p => {
     if (typeof p.id !== 'string' || !/^[a-z0-9-]+$/i.test(p.id)) p.id = uid();
     p.desc = p.desc || '';
@@ -328,20 +292,22 @@ function load() {
   } catch (e) { storageOK = false; }
   if (raw) {
     try { const d = JSON.parse(raw); if (valid(d)) return normalize(d); } catch (e) {}
-    return { projects: [], settings: { chime: true } };
+    return { projects: [], settings: { chime: true, theme: 'system' } };
   }
   return seed();
 }
 function save() {
   if (!storageOK) return;
   try { localStorage.setItem(KEY, JSON.stringify(state)); }
-  catch (e) { storageOK = false; $('#storage-warn').hidden = false; }
+  catch (e) { storageOK = false; render(); }
 }
 
 function seed() {
   const n = now(), M = 60e3, H = 60 * M;
   const seg = (s, m) => ({ s, e: s + m * M });
-  const d1 = n - 26 * H, d2 = d1 + 75 * M, d3 = n - 5 * H, d4 = n - 35 * M, s0 = n - 3 * H;
+  const sod = new Date(n); sod.setHours(0, 0, 0, 0);
+  const at = (daysAgo, h, m = 0) => { const d = new Date(sod); d.setDate(d.getDate() - daysAgo); d.setHours(h, m, 0, 0); return d.getTime(); };
+  const d1 = at(9, 10), d2 = at(6, 14), d3 = at(1, 19, 30), d4 = n - 35 * M, s0 = at(3, 9, 30);
   const camera = {
     id: uid(), name: 'Camera app', desc: 'Capture pipeline, live preview and a settings panel.', createdAt: d1 - 10 * M, sample: true,
     turns: [
@@ -357,12 +323,15 @@ function seed() {
       { id: uid(), desc: 'Sketch the event tagging screen: pass, shot, tackle.', createdAt: s0, done: true, finishedAt: s0 + 56 * M, segments: [seg(s0, 30), seg(s0 + 34 * M, 22)] }
     ]
   };
-  return { projects: [camera, soccer], settings: { chime: true } };
+  return { projects: [camera, soccer], settings: { chime: true, theme: 'system' } };
 }
 
 let state = load();
-const ui = { newOpen: false, editProject: false, editTurn: null, confirm: null, draftName: '', draftDesc: '', draftTurn: '', openSegs: new Set() };
-let pendingRestore = null;
+const ui = {
+  newOpen: false, editProject: false, editTurn: null, confirm: null,
+  draftName: '', draftDesc: '', draftTurn: '',
+  backupOpen: false, backupText: '', backupMsg: '', restorePending: null
+};
 
 /* ---------- Time math ---------- */
 const getP = id => state.projects.find(p => p.id === id);
@@ -376,13 +345,12 @@ function curBreakMs(t, n = now()) { if (t.done) return 0; const g = lastSeg(t); 
 function breakCount(t) { const g = lastSeg(t); return Math.max(0, t.segments.length - 1) + (!t.done && g && g.e != null ? 1 : 0); }
 function projectBreaks(p, n = now()) { let c = 0, ms = 0; p.turns.forEach(t => { c += breakCount(t); ms += gapsMs(t) + curBreakMs(t, n); }); return { c, ms }; }
 function findRunning() { for (const p of state.projects) for (const t of p.turns) if (isRunning(t)) return { p, t }; return null; }
-function projStatus(p) { const o = openTurn(p); if (o) return isRunning(o) ? 'run' : 'pause'; if (p.turns.length >= MAX_TURNS) return 'done'; return p.turns.length ? 'idle' : 'new'; }
 function lastActivity(p) { const n = now(); let m = p.createdAt || 0; p.turns.forEach(t => t.segments.forEach(g => { m = Math.max(m, g.s, g.e ?? n); })); return m; }
 
 function fmtClock(ms) {
   const s = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
-  return `${h}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`;
 }
 const fmtTime = ts => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 function fmtDay(ts) {
@@ -391,6 +359,115 @@ function fmtDay(ts) {
   if (d.toDateString() === y.toDateString()) return 'Yesterday';
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
+
+function fmtHM(ms) {
+  const m = Math.round(ms / 60000);
+  if (m <= 0) return ms > 0 ? '<1m' : '0m';
+  const h = Math.floor(m / 60), r = m % 60;
+  return h ? `${h}h ${String(r).padStart(2, '0')}m` : `${r}m`;
+}
+
+/* ---------- Activity calendar ---------- */
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function sodOf(ts) { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); }
+function nextDayOf(ts) { const d = new Date(ts); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 1); return d.getTime(); }
+function dayKey(ts) { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function scopeProjects(scope) { return scope === 'all' ? state.projects : state.projects.filter(p => p.id === scope); }
+
+/* Work time per local day; a session that crosses midnight is split between the two days. Breaks never count. */
+function dailyTotals(projects, n = now()) {
+  const map = new Map();
+  projects.forEach(p => p.turns.forEach(t => t.segments.forEach(g => {
+    let s = g.s; const e = g.e ?? n;
+    while (s < e) {
+      const b = Math.min(e, nextDayOf(s)), k = dayKey(s);
+      let r = map.get(k); if (!r) { r = { ms: 0, names: new Set() }; map.set(k, r); }
+      r.ms += b - s; r.names.add(p.name); s = b;
+    }
+  })));
+  return map;
+}
+function dayMs(projects, from, n = now()) {
+  const to = nextDayOf(from); let ms = 0;
+  projects.forEach(p => p.turns.forEach(t => t.segments.forEach(g => {
+    const s = Math.max(g.s, from), e = Math.min(g.e ?? n, to); if (e > s) ms += e - s;
+  })));
+  return ms;
+}
+const HOUR = 3600000;
+const heatLevel = ms => ms <= 0 ? 0 : ms < HOUR ? 1 : ms < 2 * HOUR ? 2 : ms < 4 * HOUR ? 3 : 4;
+const dayLabel = ts => new Date(ts).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+
+function heatmap(scope) {
+  const n = now(), projects = scopeProjects(scope), map = dailyTotals(projects, n);
+  const today = sodOf(n);
+  const start = new Date(today); start.setDate(start.getDate() - start.getDay() - 52 * 7);
+  let cells = '', months = '', lastMonth = -1, lastLabelCol = -9, totalMs = 0, active = 0;
+  for (let w = 0; w < 53; w++) {
+    for (let d = 0; d < 7; d++) {
+      const day = new Date(start); day.setDate(start.getDate() + w * 7 + d);
+      const ts = day.getTime();
+      if (day.getMonth() !== lastMonth && ts <= today + 6 * 864e5) {
+        if (w - lastLabelCol >= 3 && !(w === 0 && day.getDate() > 14)) {
+          months += `<span class="hm-month" style="grid-area:1/${w + 2}">${day.toLocaleDateString([], { month: 'short' })}</span>`;
+          lastLabelCol = w;
+        }
+        lastMonth = day.getMonth();
+      }
+      const area = `grid-area:${d + 2}/${w + 2}`;
+      if (ts > today) { cells += `<span class="hm-cell future" style="${area}"></span>`; continue; }
+      const k = dayKey(ts), r = map.get(k), ms = r ? r.ms : 0, isToday = ts === today;
+      if (ms > 0) { totalMs += ms; active++; }
+      const names = r ? [...r.names].join(', ') : '';
+      cells += `<span class="hm-cell l${heatLevel(ms)}${isToday ? ' today' : ''}" style="${area}" data-day="${ts}" data-ms="${ms}" data-names="${esc(names)}"${isToday ? ` data-live="hm-today" data-scope="${scope}"` : ''} title="${esc(`${dayLabel(ts)}: ${fmtHM(ms)}`)}"></span>`;
+    }
+  }
+  let streak = 0;
+  for (let d = new Date(today); ; d.setDate(d.getDate() - 1)) {
+    const r = map.get(dayKey(d.getTime()));
+    if (r && r.ms > 0) streak++;
+    else if (d.getTime() === today) continue;
+    else break;
+    if (streak > 400) break;
+  }
+  const dayRows = `<span class="hm-gut" style="grid-area:1/1/9/2" aria-hidden="true"></span>` + [1, 3, 5].map(d => `<span class="hm-day" style="grid-area:${d + 2}/1">${DAY_NAMES[d]}</span>`).join('');
+  const todayMs = map.get(dayKey(today))?.ms || 0;
+  return `
+    <section class="sec hm" data-scope="${scope}">
+      <div class="sec-head"><span class="eyebrow">Activity</span><span class="eyebrow">Hours worked per day</span></div>
+      <div class="panel">
+        <div class="hm-top"><span class="eyebrow">Last 12 months</span><span class="hm-read" aria-live="polite" data-default="Today · ${fmtHM(todayMs)}">Today · ${fmtHM(todayMs)}</span></div>
+        <div class="hm-scroll"><div class="hm-grid" role="img" aria-label="${esc(`${fmtHM(totalMs)} worked on ${plural(active, 'day')} in the last 12 months`)}">${months}${dayRows}${cells}</div></div>
+        <div class="hm-foot">
+          <div class="hm-key" aria-label="Less than 1 hour to 4 hours or more"><span>Less</span><i class="hm-cell l0"></i><i class="hm-cell l1"></i><i class="hm-cell l2"></i><i class="hm-cell l3"></i><i class="hm-cell l4"></i><span>4h+</span></div>
+          <div class="hm-stats"><span><b>${fmtHM(totalMs)}</b> worked</span><span><b>${active}</b> active ${active === 1 ? 'day' : 'days'}</span><span><b>${streak}</b>-day streak</span></div>
+        </div>
+      </div>
+    </section>`;
+}
+
+/* ---------- Theme ---------- */
+const root = document.documentElement;
+let hostTheme = root.getAttribute('data-theme');
+function applyTheme() {
+  const t = state.settings.theme;
+  if (t === 'light' || t === 'dark') { if (root.getAttribute('data-theme') !== t) root.setAttribute('data-theme', t); }
+  else if (hostTheme) root.setAttribute('data-theme', hostTheme);
+  else root.removeAttribute('data-theme');
+}
+try {
+  new MutationObserver(() => {
+    const v = root.getAttribute('data-theme'), t = state.settings.theme;
+    if (t === 'light' || t === 'dark') { if (v !== t) { hostTheme = v; applyTheme(); } }
+    else hostTheme = v;
+  }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+} catch (e) {}
+
+const THEME_ICONS = {
+  light: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="3.1"/><path d="M8 1.2v1.6M8 13.2v1.6M1.2 8h1.6M13.2 8h1.6M3.2 3.2l1.13 1.13M11.67 11.67l1.13 1.13M12.8 3.2l-1.13 1.13M4.33 11.67L3.2 12.8"/></svg>',
+  dark: '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M13.2 10.1A5.8 5.8 0 0 1 5.9 2.8a5.9 5.9 0 1 0 7.3 7.3z"/></svg>',
+  system: '<svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="5.4" fill="none"/><path d="M8 2.6a5.4 5.4 0 0 1 0 10.8z" fill="currentColor" stroke="none"/></svg>'
+};
 
 /* ---------- Actions ---------- */
 function closeRunning(except) {
@@ -418,239 +495,291 @@ function finish(p, t) {
   if (isRunning(t)) lastSeg(t).e = now();
   t.done = true; t.finishedAt = now();
   save(); render();
-  toast(`Turn ${p.turns.indexOf(t) + 1} logged: ${fmtClock(turnMs(t))}.`);
+  toast(`Turn ${p.turns.indexOf(t) + 1} saved: ${fmtClock(turnMs(t))}`);
 }
 function reopen(p, t) { if (openTurn(p)) return; t.done = false; delete t.finishedAt; save(); render(); }
 
-/* ---------- Views ---------- */
+/* ---------- Pieces ---------- */
 function route() {
   const h = location.hash.slice(1);
   if (h.startsWith('p-')) { const p = getP(h.slice(2)); if (p) return { view: 'project', p }; }
   return { view: 'home' };
 }
 
-function chip(kind, label) {
-  const cls = { run: 'chip-run', pause: 'chip-pause', over: 'chip-over', sample: 'chip-sample' }[kind] || '';
-  return `<span class="chip ${cls}">${esc(label)}</span>`;
-}
-
-function slotCls(t, n) {
-  if (!t) return 'empty';
-  let c = t.done ? 'done' : isRunning(t) ? 'run' : 'pause';
+function segCls(t, n) {
+  if (!t) return 'seg';
+  let c = 'seg';
+  if (!t.done && !isRunning(t)) c += ' paused';
   if (turnMs(t, n) > TURN_MS) c += ' over';
   return c;
 }
-function meter(p, compact) {
-  const n = now(), total = projectMs(p, n);
-  let track = '', legend = '';
+function split(p) {
+  const n = now();
+  let h = '';
   for (let i = 0; i < MAX_TURNS; i++) {
     const t = p.turns[i];
     const w = t ? Math.min(100, turnMs(t, n) / TURN_MS * 100) : 0;
-    track += `<div class="slot ${slotCls(t, n)}" data-live="slot" data-pid="${p.id}" data-i="${i}"><span class="fill" style="width:${w}%"></span></div>`;
-    if (!compact) {
-      legend += t
-        ? `<span><em>Turn ${i + 1}</em><b class="${turnMs(t, n) > TURN_MS ? 'over' : ''}" data-live="turn-clock" ${ids(p, t)}>${fmtClock(turnMs(t, n))}</b></span>`
-        : `<span><em>Turn ${i + 1}</em><b class="dim">–</b></span>`;
-    }
+    h += `<span class="${segCls(t, n)}" data-live="seg" data-pid="${p.id}" data-i="${i}"><span class="fill" style="width:${w}%"></span></span>`;
   }
-  const scale = compact ? '' : `<div class="meter-scale" aria-hidden="true"><span>0h</span><span>1h</span><span>2h</span><span>3h</span><span><span>4h</span><span>5h</span></span></div>`;
-  const label = `${fmtClock(total)} of 5 hours used across ${plural(p.turns.length, 'turn')}`;
-  return `<div class="meter${compact ? ' compact' : ''}" role="img" aria-label="${esc(label)}">${scale}<div class="meter-track">${track}</div>${compact ? '' : `<div class="meter-legend" aria-hidden="true">${legend}</div>`}</div>`;
+  return `<div class="split" role="img" aria-label="${esc(`${p.turns.length} of ${MAX_TURNS} turns, ${fmtClock(projectMs(p, n))} of 5 hours`)}">${h}</div>`;
 }
 
+function railKey(t, n) {
+  if (!t) return 'none';
+  const ms = turnMs(t, n);
+  return `${Math.floor(ms / 60000)}|${isRunning(t)}|${ms > TURN_MS}`;
+}
+function railTicks(t, n) {
+  const ms = t ? turnMs(t, n) : 0, mins = Math.floor(ms / 60000), over = ms > TURN_MS, run = t && isRunning(t);
+  let h = '';
+  for (let i = 0; i < 60; i++) {
+    let c = 'tick';
+    if (t && over) c += ' over';
+    else if (t && i < mins) c += ' filled';
+    else if (t && i === mins) c += run ? ' head' : ' head still';
+    else if ((i + 1) % 15 === 0) c += ' q';
+    h += `<span class="${c}"></span>`;
+  }
+  return h;
+}
+function rail(p, t) {
+  const n = now();
+  return `<div class="rail" data-live="rail" ${t ? ids(p, t) : `data-pid="${p.id}"`} data-k="${railKey(t, n)}" aria-hidden="true">${railTicks(t, n)}</div>
+    <div class="rail-legend" aria-hidden="true"><span>0</span><span>15</span><span>30</span><span>45</span><span>60 min</span></div>`;
+}
+
+function leftText(t, n) {
+  const d = TURN_MS - turnMs(t, n);
+  return d >= 0 ? `${fmtClock(d)} left in this hour` : `${fmtClock(-d)} past the hour`;
+}
+
+function confirmBox(msg, action, attrs) {
+  return `<div class="confirm" role="alert"><span>${msg}</span><div class="controls"><button class="btn sm danger" type="button" data-action="${action}" ${attrs}>Delete</button><button class="btn sm" type="button" data-action="cancel-confirm">Keep</button></div></div>`;
+}
+
+/* ---------- Home ---------- */
 function viewHome() {
   const ps = [...state.projects].sort((a, b) => lastActivity(b) - lastActivity(a));
-  const showForm = ui.newOpen || ps.length === 0;
+  const n = now();
+  const total = ps.reduce((a, p) => a + projectMs(p, n), 0);
+  const turns = ps.reduce((a, p) => a + p.turns.length, 0);
   const samples = ps.filter(p => p.sample);
+  const showForm = ui.newOpen || ps.length === 0;
   return `
-    <section class="intro">
-      <div class="intro-text">
-        <h1>Projects</h1>
-        <p class="lede">Each project gets ${MAX_TURNS} turns of about an hour, ${MAX_TURNS} hours in all. Open a project to start or resume a turn.</p>
-      </div>
-      ${showForm ? '' : `<button class="btn btn-primary" type="button" data-action="new-open">${ICON.plus} New project</button>`}
+    ${!storageOK ? `<div class="banner"><span>This browser is blocking storage, so projects will be lost when you close the page.</span></div>` : ''}
+    ${samples.length ? `<div class="banner"><span>${samples.map(p => esc(p.name)).join(' and ')} ${samples.length > 1 ? 'are samples' : 'is a sample'} to show how turns look.</span><button class="btn sm" type="button" data-action="clear-samples">Clear samples</button></div>` : ''}
+    <section class="grand">
+      <div class="eyebrow">Time across all projects</div>
+      <div class="grand-amt" data-live="grand">${fmtClock(total)}</div>
+      <div class="grand-sub">${plural(ps.length, 'project')} · ${plural(turns, 'turn')}</div>
     </section>
     ${showForm ? newProjectForm(ps.length === 0) : ''}
-    ${samples.length ? `<div class="notice"><span>${samples.map(p => esc(p.name)).join(' and ')} ${samples.length > 1 ? 'are sample projects' : 'is a sample project'} so you can see how turns look.</span><button class="btn" type="button" data-action="clear-samples">Clear samples</button></div>` : ''}
-    ${ps.length ? `<ul class="plist">${ps.map(projectCard).join('')}</ul>` : ''}`;
+    ${ps.length ? `<ul class="cards" style="${showForm ? 'margin-top:22px' : ''}">${ps.map(projectCard).join('')}</ul>` : ''}
+    <div class="controls">
+      ${showForm ? '' : `<button class="btn primary" type="button" data-action="new-open">New project</button>`}
+      <button class="btn" type="button" data-action="backup-toggle" aria-expanded="${ui.backupOpen}">Backup and restore</button>
+    </div>
+    ${ui.backupOpen ? backupPanel() : ''}
+    ${ps.length ? heatmap('all') : ''}`;
 }
 
 function newProjectForm(first) {
   return `
-    <form class="panel" id="np-form" autocomplete="off">
-      <div class="panel-head"><h2>${first ? 'Create your first project' : 'New project'}</h2>${first ? '' : '<button type="button" class="btn btn-ghost" data-action="new-close">Cancel</button>'}</div>
-      <div class="field"><label for="np-name">Project name</label><input type="text" id="np-name" maxlength="80" required placeholder="e.g. Camera app" value="${esc(ui.draftName)}"></div>
-      <div class="field"><label for="np-desc">Description</label><textarea id="np-desc" rows="3" maxlength="800" placeholder="What is this project about?">${esc(ui.draftDesc)}</textarea></div>
-      <div class="row"><button class="btn btn-primary" type="submit">Create project</button></div>
+    <form class="face" id="np-form" autocomplete="off">
+      <div class="face-top"><h2 class="plate-name">${first ? 'Create your first project' : 'New project'}</h2>${first ? '' : '<button type="button" class="linkbtn" data-action="new-close">Cancel</button>'}</div>
+      <div class="field first"><label for="np-name">Name</label><input class="inp" type="text" id="np-name" maxlength="80" required placeholder="Camera app" value="${esc(ui.draftName)}"></div>
+      <div class="field"><label for="np-desc">Description</label><textarea class="inp" id="np-desc" rows="2" maxlength="800" placeholder="What is this project about?">${esc(ui.draftDesc)}</textarea></div>
+      <div class="controls"><button class="btn primary" type="submit">Create project</button></div>
     </form>`;
 }
 
 function projectCard(p) {
-  const st = projStatus(p), o = openTurn(p), n = p.turns.length;
-  const label = { run: 'Running', pause: 'Paused', done: 'All turns used', idle: 'Idle', new: 'Not started' }[st];
-  const turnLabel = o ? `Turn ${p.turns.indexOf(o) + 1} of ${MAX_TURNS}` : `${n} of ${MAX_TURNS} turns`;
-  const over = projectMs(p) > BUDGET_MS;
+  const o = openTurn(p), n = p.turns.length;
+  let meta, dot = '';
+  if (o) {
+    const run = isRunning(o);
+    dot = `<span class="dot${run ? '' : ' paused'}"></span>`;
+    meta = `Turn ${p.turns.indexOf(o) + 1} of ${MAX_TURNS} · ${run ? 'running' : 'paused'}`;
+  } else if (n >= MAX_TURNS) meta = `All ${MAX_TURNS} turns done`;
+  else if (n) meta = `${n} of ${MAX_TURNS} turns`;
+  else meta = 'Not started';
   return `
-    <li class="pcard"><a href="#p-${p.id}">
-      <div class="pcard-head"><h2>${esc(p.name)}</h2><span class="chips">${p.sample ? chip('sample', 'Sample') : ''}${over ? chip('over', 'Over 5h') : ''}${chip(st, label)}</span></div>
-      ${p.desc ? `<p class="desc">${esc(p.desc)}</p>` : ''}
-      ${meter(p, true)}
-      <div class="pcard-foot"><span class="mono"><b data-live="proj-clock" data-pid="${p.id}">${fmtClock(projectMs(p))}</b> / ${fmtClock(BUDGET_MS)}</span><span>${turnLabel}</span></div>
+    <li><a class="card" href="#p-${p.id}">
+      <span><span class="card-name">${dot}${esc(p.name)}</span><span class="card-meta">${meta}</span></span>
+      <span><span class="card-amt" data-live="proj-clock" ${ids(p)}>${fmtClock(projectMs(p))}</span><span class="card-dur">of ${fmtClock(BUDGET_MS)}</span></span>
+      ${split(p)}
     </a></li>`;
 }
 
-function viewProject(p) {
-  const n = now(), used = p.turns.length, total = projectMs(p, n), br = projectBreaks(p, n), left = BUDGET_MS - total;
-  const head = ui.editProject ? `
-    <form class="panel edit-project" data-pid="${p.id}" autocomplete="off">
-      <div class="panel-head"><h2>Edit project</h2></div>
-      <div class="field"><label for="ep-name">Project name</label><input type="text" id="ep-name" maxlength="80" required value="${esc(p.name)}"></div>
-      <div class="field"><label for="ep-desc">Description</label><textarea id="ep-desc" rows="3" maxlength="800">${esc(p.desc)}</textarea></div>
-      <div class="row"><button class="btn btn-primary" type="submit">Save</button><button class="btn" type="button" data-action="cancel-edit-project">Cancel</button></div>
-    </form>` : `
-    <header class="phead">
-      <div class="phead-text">
-        <span class="eyebrow">Project${p.sample ? ' · Sample' : ''}</span>
-        <h1>${esc(p.name)}</h1>
-        ${p.desc ? `<p class="lede">${esc(p.desc)}</p>` : ''}
-      </div>
-      <button class="btn" type="button" data-action="edit-project" ${ids(p)}>Edit</button>
-    </header>`;
+function backupPanel() {
+  const pending = ui.restorePending;
   return `
-    <nav class="crumbs"><a href="#" class="btn btn-ghost">${ICON.back} All projects</a></nav>
-    ${head}
-    <section class="budget" aria-label="Time budget">
-      <div class="stats">
-        <div class="stat"><span class="k">Total</span><span class="v" data-live="proj-clock" ${ids(p)}>${fmtClock(total)}</span><span class="s">of ${fmtClock(BUDGET_MS)}</span></div>
-        <div class="stat${left < 0 ? ' over' : ''}" data-live="proj-left" ${ids(p)}><span class="k">${left < 0 ? 'Over budget' : 'Left'}</span><span class="v">${fmtClock(Math.abs(left))}</span><span class="s">5-hour budget</span></div>
-        <div class="stat"><span class="k">Turns</span><span class="v">${used} / ${MAX_TURNS}</span><span class="s">${MAX_TURNS - used} not started</span></div>
-        <div class="stat"><span class="k">Breaks</span><span class="v" data-live="proj-break" ${ids(p)}>${fmtClock(br.ms)}</span><span class="s">${plural(br.c, 'pause')}</span></div>
-      </div>
-      ${meter(p, false)}
-    </section>
-    ${activePanel(p)}
-    ${turnLog(p)}
-    <section>${ui.confirm === 'project:' + p.id
-      ? confirmRow(`Delete ${esc(p.name)} and its ${plural(p.turns.length, 'turn')}? This can't be undone.`, 'delete-project', ids(p))
-      : `<button class="btn btn-ghost btn-danger" type="button" data-action="ask-delete-project" ${ids(p)} style="margin-left:-8px">Delete project</button>`}</section>`;
+    <section class="panel" style="margin-top:12px">
+      <div class="sec-head" style="padding:0 0 8px"><span class="eyebrow">Backup and restore</span><button class="linkbtn" type="button" data-action="backup-toggle">Close</button></div>
+      <p class="hint">Projects are saved in this browser only. Copy a backup to keep it safe or to move it to another device.</p>
+      <div class="controls" style="margin-top:14px"><button class="btn sm" type="button" data-action="copy-backup">Copy backup</button></div>
+      <div class="field"><label for="backup-in">Paste a backup to restore it</label><textarea class="inp backup-in" id="backup-in" rows="4" spellcheck="false" placeholder='{"projects":[ ... ]}'>${esc(ui.backupText)}</textarea></div>
+      ${pending
+        ? `<div class="confirm" role="alert" style="background:var(--amber-soft)"><span>Replace your ${plural(state.projects.length, 'project')} with the ${plural(pending.projects.length, 'project')} in this backup?</span><div class="controls"><button class="btn sm primary" type="button" data-action="restore">Replace</button><button class="btn sm" type="button" data-action="cancel-restore">Keep current</button></div></div>`
+        : `<div class="controls" style="margin-top:12px"><button class="btn sm" type="button" data-action="ask-restore">Restore</button></div>`}
+      <p class="hint" id="backup-msg" style="margin-top:10px" aria-live="polite">${esc(ui.backupMsg)}</p>
+    </section>`;
 }
 
-function activePanel(p) {
-  const o = openTurn(p);
+/* ---------- Project ---------- */
+function viewProject(p) {
+  const n = now(), total = projectMs(p, n), left = BUDGET_MS - total, br = projectBreaks(p, n);
+  return `
+    ${face(p)}
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Project total</span><span class="eyebrow">5-hour budget</span></div>
+      <div class="panel">
+        <div class="util"><span class="util-val" data-live="proj-clock" ${ids(p)}>${fmtClock(total)}</span><span class="util-of">of ${fmtClock(BUDGET_MS)}</span></div>
+        ${split(p)}
+        <div class="legend">
+          <span data-live="proj-left" ${ids(p)} class="${left < 0 ? 'over' : ''}">${left >= 0 ? `${fmtClock(left)} left` : `${fmtClock(-left)} over budget`}</span>
+          <span>${plural(br.c, 'break')} · <span data-live="proj-break" ${ids(p)}>${fmtClock(br.ms)}</span></span>
+        </div>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Turns</span><span class="eyebrow">${p.turns.length} of ${MAX_TURNS}</span></div>
+      <div class="panel">${p.turns.length ? p.turns.map((t, i) => turnRow(p, t, i)).join('') : '<p class="empty">No turns yet. Start turn 1 above.</p>'}</div>
+    </section>
+    ${heatmap(p.id)}
+    <section class="sec">
+      ${ui.editProject ? editProjectForm(p)
+        : ui.confirm === 'project:' + p.id ? `<div class="panel">${confirmBox(`Delete ${esc(p.name)} and its ${plural(p.turns.length, 'turn')}? This can't be undone.`, 'delete-project', ids(p))}</div>`
+        : `<div class="row-links" style="justify-content:center;margin:0"><button class="linkbtn" type="button" data-action="edit-project" ${ids(p)}>Edit project</button><button class="linkbtn danger" type="button" data-action="ask-delete-project" ${ids(p)}>Delete project</button></div>`}
+    </section>`;
+}
+
+function face(p) {
+  const o = openTurn(p), n = now();
+  const top = (pill, cls) => `
+    <div class="face-top">
+      <div><h1 class="plate-name">${esc(p.name)}</h1>${p.desc ? `<p class="plate-sub">${esc(p.desc)}</p>` : ''}</div>
+      <span class="state ${cls}">${pill}</span>
+    </div>`;
+
   if (o) {
-    const i = p.turns.indexOf(o) + 1, run = isRunning(o), ms = turnMs(o), d = TURN_MS - ms;
+    const i = p.turns.indexOf(o) + 1, run = isRunning(o), ms = turnMs(o, n);
     return `
-      <section class="panel" aria-label="Current turn">
-        <div class="active-head"><span class="eyebrow">Turn ${i} of ${MAX_TURNS}</span>${chip(run ? 'run' : 'pause', run ? 'Running' : 'Paused')}</div>
-        <div class="clock-block">
-          <div class="clock${ms > TURN_MS ? ' over' : ''}" data-live="turn-clock" ${ids(p, o)}>${fmtClock(ms)}</div>
-          <div class="clock-sub${d < 0 ? ' over' : ''}" data-live="turn-left" ${ids(p, o)}>${d >= 0 ? `${fmtClock(d)} left in this hour` : `${fmtClock(-d)} past the hour`}</div>
-          ${run ? '' : `<div class="clock-sub brk">On break for <span data-live="break-now" ${ids(p, o)}>${fmtClock(curBreakMs(o))}</span></div>`}
-        </div>
-        <div class="controls">
-          ${run
-            ? `<button class="btn btn-lg" type="button" data-action="pause" ${ids(p, o)}>${ICON.pause} Pause</button>`
-            : `<button class="btn btn-primary btn-lg" type="button" data-action="resume" ${ids(p, o)}>${ICON.play} Resume</button>`}
-          <button class="btn btn-lg" type="button" data-action="finish" ${ids(p, o)}>${ICON.check} Finish turn</button>
-          <span class="hint hint-key"><span class="kbd">Space</span>${run ? 'pauses' : 'resumes'}</span>
-        </div>
+      <section class="face" aria-label="Current turn">
+        ${top(run ? 'Running' : 'Paused', run ? 'on' : 'paused')}
+        <div class="eyebrow">Turn ${i} of ${MAX_TURNS}</div>
+        <div class="clock${ms > TURN_MS ? ' over' : ''}" data-live="turn-clock" ${ids(p, o)}>${fmtClock(ms)}</div>
+        ${run
+          ? `<div class="clock-note${ms > TURN_MS ? ' over' : ''}" data-live="turn-left" ${ids(p, o)}>${leftText(o, n)}</div>`
+          : `<div class="clock-note brk">On break · <span class="num" data-live="break-now" ${ids(p, o)}>${fmtClock(curBreakMs(o, n))}</span></div>`}
+        ${rail(p, o)}
         <div class="field">
           <label for="turn-desc">What this turn is about</label>
-          <textarea id="turn-desc" rows="3" ${ids(p, o)} placeholder="Describe the work in this turn">${esc(o.desc)}</textarea>
+          <textarea class="inp" id="turn-desc" rows="2" ${ids(p, o)} placeholder="Describe the work in this turn">${esc(o.desc)}</textarea>
           <span class="saved" id="saved-note" aria-live="polite"></span>
+        </div>
+        <div class="controls" style="margin-top:10px">
+          ${run
+            ? `<button class="btn" type="button" data-action="pause" ${ids(p, o)}>Pause</button>`
+            : `<button class="btn primary" type="button" data-action="resume" ${ids(p, o)}>Resume</button>`}
+          <button class="btn" type="button" data-action="finish" ${ids(p, o)}>Finish turn</button>
         </div>
       </section>`;
   }
+
   if (p.turns.length < MAX_TURNS) {
     const i = p.turns.length + 1;
     return `
-      <form class="panel" id="nt-form" data-pid="${p.id}" autocomplete="off">
-        <div class="active-head"><span class="eyebrow">Turn ${i} of ${MAX_TURNS}</span><span class="chip">Ready</span></div>
-        <div class="field"><label for="nt-desc">What will this turn cover?</label><textarea id="nt-desc" rows="3" placeholder="e.g. Wire up the pause button">${esc(ui.draftTurn)}</textarea></div>
-        <div class="controls"><button class="btn btn-primary btn-lg" type="submit">${ICON.play} Start turn ${i}</button><span class="hint">The timer starts right away. You can edit the description while it runs.</span></div>
+      <form class="face" id="nt-form" data-pid="${p.id}" autocomplete="off">
+        ${top('Ready', '')}
+        <div class="eyebrow">Turn ${i} of ${MAX_TURNS}</div>
+        <div class="clock idle">00:00:00</div>
+        <div class="clock-note">The timer starts when you press Start.</div>
+        ${rail(p, null)}
+        <div class="field">
+          <label for="nt-desc">What will this turn cover?</label>
+          <textarea class="inp" id="nt-desc" rows="2" placeholder="Wire up the pause button">${esc(ui.draftTurn)}</textarea>
+        </div>
+        <div class="controls"><button class="btn primary" type="submit">Start turn ${i}</button></div>
       </form>`;
   }
+
   const last = p.turns[p.turns.length - 1];
   return `
-    <section class="panel" aria-label="Turns complete">
-      <div class="active-head"><span class="eyebrow">All ${MAX_TURNS} turns used</span><span class="chip">Complete</span></div>
-      <p>This project logged <b class="mono">${fmtClock(projectMs(p))}</b> across ${MAX_TURNS} turns.</p>
+    <section class="face" aria-label="All turns done">
+      ${top('Done', '')}
+      <div class="eyebrow">All ${MAX_TURNS} turns done</div>
+      <div class="clock">${fmtClock(projectMs(p, n))}</div>
+      <div class="clock-note">Total across ${MAX_TURNS} turns.</div>
       <div class="controls"><button class="btn" type="button" data-action="reopen" ${ids(p, last)}>Reopen turn ${MAX_TURNS}</button></div>
     </section>`;
 }
 
-function segDetails(t, n) {
-  if (t.segments.length < 2) return '';
-  const items = [];
-  t.segments.forEach((g, i) => {
-    if (i > 0) items.push(`<li class="brk"><span>Break</span><span>${fmtClock(g.s - (t.segments[i - 1].e ?? g.s))}</span></li>`);
-    items.push(`<li><span>${fmtTime(g.s)} – ${g.e != null ? fmtTime(g.e) : 'now'}</span><span>${fmtClock((g.e ?? n) - g.s)}</span></li>`);
-  });
-  return `<details class="segs" data-seg="${t.id}"${ui.openSegs.has(t.id) ? ' open' : ''}><summary>${t.segments.length} work sessions</summary><ul class="seglist">${items.join('')}</ul></details>`;
-}
-
-function confirmRow(msg, action, attrs) {
-  return `<div class="confirm" role="alert"><span>${msg}</span><div class="row"><button class="btn btn-danger-solid" type="button" data-action="${action}" ${attrs}>Delete</button><button class="btn" type="button" data-action="cancel-confirm">Keep</button></div></div>`;
-}
-
-function turnRow(p, t, i, o) {
+function turnRow(p, t, i) {
   const n = now(), ms = turnMs(t, n), run = isRunning(t), first = t.segments[0], last = lastSeg(t);
-  const status = t.done ? '' : run ? chip('run', 'Running') : chip('pause', 'Paused');
+  const tag = t.done ? '' : `<span class="tag${run ? '' : ' paused'}">${run ? 'Running' : 'Paused'}</span>`;
   const end = t.done ? (last && last.e) || t.finishedAt : null;
   const when = first ? `${fmtDay(first.s)}, ${fmtTime(first.s)}${end ? ` – ${fmtTime(end)}` : ''}` : fmtDay(t.createdAt);
   const bc = breakCount(t);
-  const meta = `${when} · ${bc ? `${plural(bc, 'break')} (${fmtClock(gapsMs(t) + curBreakMs(t, n))})` : 'no breaks'}`;
+  const meta = `${when} · ${bc ? plural(bc, 'break') : 'no breaks'}`;
   const editing = ui.editTurn === t.id;
   const isLast = i === p.turns.length - 1;
-  const body = editing
-    ? `<form class="edit-turn" ${ids(p, t)}><label class="sr" for="et-${t.id}">Description for turn ${i + 1}</label><textarea id="et-${t.id}" rows="2">${esc(t.desc)}</textarea><div class="row"><button class="btn btn-primary" type="submit">Save</button><button type="button" class="btn" data-action="cancel-edit-turn">Cancel</button></div></form>`
-    : `<p class="tdesc${t.desc ? '' : ' empty'}" data-desc-for="${t.id}">${t.desc ? esc(t.desc) : 'No description'}</p>`;
-  const actions = ui.confirm === 'turn:' + t.id
-    ? confirmRow(`Delete turn ${i + 1} (${fmtClock(ms)})?`, 'delete-turn', ids(p, t))
-    : `<div class="tactions">
-        ${t.done && !editing ? `<button class="btn btn-ghost" type="button" data-action="edit-turn" ${ids(p, t)}>Edit description</button>` : ''}
-        ${t.done && isLast && !o ? `<button class="btn btn-ghost" type="button" data-action="reopen" ${ids(p, t)}>Reopen</button>` : ''}
-        <button class="btn btn-ghost btn-danger" type="button" data-action="ask-delete-turn" ${ids(p, t)}>Delete</button>
-      </div>`;
+  const desc = editing
+    ? `<form class="edit-turn" ${ids(p, t)}><label class="eyebrow" for="et-${t.id}">Description</label><textarea class="inp" id="et-${t.id}" rows="2">${esc(t.desc)}</textarea><div class="controls"><button class="btn sm primary" type="submit">Save</button><button type="button" class="btn sm" data-action="cancel-edit-turn">Cancel</button></div></form>`
+    : `<p class="row-desc${t.desc ? '' : ' empty'}" data-desc-for="${t.id}">${t.desc ? esc(t.desc) : 'No description'}</p>`;
+  const links = [];
+  if (t.done && !editing) links.push(`<button class="linkbtn" type="button" data-action="edit-turn" ${ids(p, t)}>Edit</button>`);
+  if (t.done && isLast && !openTurn(p)) links.push(`<button class="linkbtn" type="button" data-action="reopen" ${ids(p, t)}>Reopen</button>`);
   return `
-    <li class="trow">
-      <span class="tnum">${String(i + 1).padStart(2, '0')}</span>
-      <div class="tmain">${body}<p class="tmeta">${status}${esc(meta)}</p></div>
-      <div class="ttime"><span data-live="turn-clock" ${ids(p, t)}>${fmtClock(ms)}</span><span class="over-note" data-live="turn-over" ${ids(p, t)}${ms > TURN_MS ? '' : ' hidden'}>+${fmtClock(ms - TURN_MS)} over</span></div>
-      <div class="tfoot">${segDetails(t, n)}${actions}</div>
-    </li>`;
-}
-
-function turnLog(p) {
-  if (!p.turns.length) return `<section class="log"><h2>Turn log</h2><p class="muted">No turns yet. Start turn 1 above.</p></section>`;
-  const o = openTurn(p);
-  return `
-    <section class="log">
-      <div class="log-head"><h2>Turn log</h2><span class="eyebrow">${p.turns.length} of ${MAX_TURNS}</span></div>
-      <ol class="tlist">${p.turns.map((t, i) => turnRow(p, t, i, o)).join('')}</ol>
-    </section>`;
-}
-
-function renderRunbar(r) {
-  const rb = $('#runbar'), run = findRunning();
-  const show = !!run && !(r.view === 'project' && r.p === run.p);
-  rb.hidden = !show;
-  document.body.classList.toggle('has-runbar', show);
-  if (!show) { rb.innerHTML = ''; return; }
-  const i = run.p.turns.indexOf(run.t) + 1;
-  rb.innerHTML = `
-    <div class="runbar-in">
-      <span class="runbar-dot" aria-hidden="true"></span>
-      <a class="runbar-txt" href="#p-${run.p.id}"><span class="runbar-name">${esc(run.p.name)}</span><span class="runbar-sub">Turn ${i} of ${MAX_TURNS} running · open</span></a>
-      <span class="runbar-clock mono" data-live="turn-clock" ${ids(run.p, run.t)}>${fmtClock(turnMs(run.t))}</span>
-      <button class="btn" type="button" data-action="pause" ${ids(run.p, run.t)}>${ICON.pause} Pause</button>
+    <div class="row">
+      <div>
+        <div class="row-title">Turn ${i + 1}${tag}</div>
+        ${desc}
+        <div class="row-meta">${esc(meta)}</div>
+        ${links.length ? `<div class="row-links">${links.join('')}</div>` : ''}
+      </div>
+      <div class="row-amt"><span data-live="turn-clock" ${ids(p, t)}>${fmtClock(ms)}</span><span class="row-over" data-live="turn-over" ${ids(p, t)}${ms > TURN_MS ? '' : ' hidden'}>+${fmtClock(ms - TURN_MS)}</span></div>
+      <button class="x" type="button" data-action="ask-delete-turn" ${ids(p, t)} aria-label="Delete turn ${i + 1}">×</button>
+      ${ui.confirm === 'turn:' + t.id ? confirmBox(`Delete turn ${i + 1} (${fmtClock(ms)})?`, 'delete-turn', ids(p, t)) : ''}
     </div>`;
 }
 
+function editProjectForm(p) {
+  return `
+    <form class="panel edit-project" data-pid="${p.id}" autocomplete="off">
+      <div class="field first"><label for="ep-name">Name</label><input class="inp" type="text" id="ep-name" maxlength="80" required value="${esc(p.name)}"></div>
+      <div class="field"><label for="ep-desc">Description</label><textarea class="inp" id="ep-desc" rows="2" maxlength="800">${esc(p.desc)}</textarea></div>
+      <div class="controls"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" data-action="cancel-edit-project">Cancel</button></div>
+    </form>`;
+}
+
+/* ---------- Render ---------- */
+function renderChrome(r) {
+  $('#topbar').innerHTML = r.view === 'project'
+    ? `<a class="mark" href="#">Turn Meter</a><a class="linkbtn" href="#">← All projects</a>`
+    : `<a class="mark" href="#">Turn Meter</a><span class="top-note">5 turns × 60 min</span>`;
+  const run = findRunning();
+  const show = !!run && !(r.view === 'project' && r.p === run.p);
+  $('#runbar').innerHTML = show ? `
+    <div class="runbar">
+      <span class="runbar-dot" aria-hidden="true"></span>
+      <a class="runbar-what" href="#p-${run.p.id}"><span class="runbar-name">${esc(run.p.name)}</span><span class="runbar-turn">Turn ${run.p.turns.indexOf(run.t) + 1} of ${MAX_TURNS}</span></a>
+      <span class="runbar-time" data-live="turn-clock" ${ids(run.p, run.t)}>${fmtClock(turnMs(run.t))}</span>
+      <button class="runbar-btn" type="button" data-action="pause" ${ids(run.p, run.t)}>Pause</button>
+    </div>` : '';
+  const th = state.settings.theme || 'system';
+  const opts = [['light', 'Day'], ['dark', 'Night'], ['system', 'Auto: match this device']];
+  $('#foot').innerHTML = `
+    <div class="theme" role="radiogroup" aria-label="Theme">
+      ${opts.map(([k, label]) => `<button class="theme-btn${th === k ? ' on' : ''}" type="button" role="radio" aria-checked="${th === k}" aria-label="${label}" title="${label}" data-action="theme" data-theme-choice="${k}">${THEME_ICONS[k]}</button>`).join('')}
+    </div>
+    <label class="check" for="chime"><input type="checkbox" id="chime"${state.settings.chime ? ' checked' : ''}> Chime at 60 minutes and at 5 hours</label>`;
+}
 function render() {
   const r = route();
+  renderChrome(r);
   $('#view').innerHTML = r.view === 'project' ? viewProject(r.p) : viewHome();
-  renderRunbar(r);
+  document.querySelectorAll('.hm-scroll').forEach(el => { el.scrollLeft = el.scrollWidth; });
   updateLive();
 }
 
@@ -658,27 +787,39 @@ function render() {
 function updateLive() {
   const n = now();
   document.querySelectorAll('[data-live]').forEach(el => {
+    if (el.dataset.live === 'grand') { el.textContent = fmtClock(state.projects.reduce((a, p) => a + projectMs(p, n), 0)); return; }
+    if (el.dataset.live === 'hm-today') {
+      const ms = dayMs(scopeProjects(el.dataset.scope), sodOf(n), n);
+      el.className = `hm-cell l${heatLevel(ms)} today${el.classList.contains('picked') ? ' picked' : ''}`;
+      el.dataset.ms = ms; el.title = `${dayLabel(+el.dataset.day)}: ${fmtHM(ms)}`;
+      return;
+    }
     const p = getP(el.dataset.pid); if (!p) return;
     const t = el.dataset.tid ? p.turns.find(x => x.id === el.dataset.tid) : null;
     switch (el.dataset.live) {
-      case 'turn-clock': if (t) { const ms = turnMs(t, n); el.textContent = fmtClock(ms); el.classList.toggle('over', ms > TURN_MS); } break;
-      case 'turn-left': if (t) { const d = TURN_MS - turnMs(t, n); el.textContent = d >= 0 ? `${fmtClock(d)} left in this hour` : `${fmtClock(-d)} past the hour`; el.classList.toggle('over', d < 0); } break;
-      case 'turn-over': if (t) { const d = turnMs(t, n) - TURN_MS; el.hidden = d <= 0; if (d > 0) el.textContent = `+${fmtClock(d)} over`; } break;
+      case 'turn-clock': if (t) { const ms = turnMs(t, n); el.textContent = fmtClock(ms); if (el.classList.contains('clock')) el.classList.toggle('over', ms > TURN_MS); } break;
+      case 'turn-left': if (t) { el.textContent = leftText(t, n); el.classList.toggle('over', turnMs(t, n) > TURN_MS); } break;
+      case 'turn-over': if (t) { const d = turnMs(t, n) - TURN_MS; el.hidden = d <= 0; if (d > 0) el.textContent = `+${fmtClock(d)}`; } break;
       case 'break-now': if (t) el.textContent = fmtClock(curBreakMs(t, n)); break;
       case 'proj-clock': el.textContent = fmtClock(projectMs(p, n)); break;
       case 'proj-break': el.textContent = fmtClock(projectBreaks(p, n).ms); break;
       case 'proj-left': {
         const d = BUDGET_MS - projectMs(p, n);
-        el.querySelector('.k').textContent = d >= 0 ? 'Left' : 'Over budget';
-        el.querySelector('.v').textContent = fmtClock(Math.abs(d));
+        el.textContent = d >= 0 ? `${fmtClock(d)} left` : `${fmtClock(-d)} over budget`;
         el.classList.toggle('over', d < 0);
         break;
       }
-      case 'slot': {
+      case 'seg': {
         const t2 = p.turns[+el.dataset.i];
-        el.className = 'slot ' + slotCls(t2, n);
+        el.className = segCls(t2, n);
         const f = el.firstElementChild;
         if (f) f.style.width = (t2 ? Math.min(100, turnMs(t2, n) / TURN_MS * 100) : 0) + '%';
+        break;
+      }
+      case 'hm-today': break;
+      case 'rail': {
+        const k = railKey(t, n);
+        if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = railTicks(t, n); }
         break;
       }
     }
@@ -722,7 +863,7 @@ function toast(msg) {
   const el = $('#toast');
   el.textContent = msg; el.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; }, 4500);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 4000);
 }
 
 const BASE_TITLE = document.title || 'Turn Meter';
@@ -730,7 +871,7 @@ let topLevel = false;
 try { topLevel = window.top === window.self; } catch (e) {}
 function updateTitle(run) {
   if (!topLevel) return;
-  const t = run ? `▶ ${fmtClock(turnMs(run.t))} · ${run.p.name}` : BASE_TITLE;
+  const t = run ? `${fmtClock(turnMs(run.t))} · ${run.p.name}` : BASE_TITLE;
   if (document.title !== t) document.title = t;
 }
 
@@ -752,35 +893,29 @@ function tick() {
 }
 
 /* ---------- Backup ---------- */
+function setBackupMsg(m) { ui.backupMsg = m; const el = $('#backup-msg'); if (el) el.textContent = m; }
 function copyBackup() {
   const json = JSON.stringify(state, null, 2);
-  const note = $('#copy-note');
   const fallback = () => {
-    const ta = $('#backup-in'); ta.value = json; ta.focus(); ta.select();
-    note.textContent = 'Clipboard is blocked here. The backup is selected in the box below; copy it with Ctrl+C or ⌘C.';
+    ui.backupText = json;
+    const ta = $('#backup-in'); if (ta) { ta.value = json; ta.focus(); ta.select(); }
+    setBackupMsg('Clipboard is blocked here. The backup is selected in the box above; copy it with Ctrl+C or ⌘C.');
   };
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(json).then(() => { note.textContent = `Copied ${plural(state.projects.length, 'project')}.`; }, fallback);
+      navigator.clipboard.writeText(json).then(() => setBackupMsg(`Copied ${plural(state.projects.length, 'project')}.`), fallback);
     } else fallback();
   } catch (e) { fallback(); }
 }
-function renderRestoreZone(confirming, msg) {
-  const z = $('#restore-zone');
-  z.innerHTML = confirming
-    ? `<div class="confirm" role="alert"><span>Replace your ${plural(state.projects.length, 'project')} with the ${plural(pendingRestore.projects.length, 'project')} in this backup?</span><div class="row"><button class="btn btn-danger-solid" type="button" data-action="restore">Replace</button><button class="btn" type="button" data-action="cancel-restore">Keep current data</button></div></div>`
-    : `<div class="row"><button class="btn" type="button" data-action="ask-restore">Restore</button>${msg ? `<span class="muted">${esc(msg)}</span>` : ''}</div>`;
-}
 function askRestore() {
-  const raw = $('#backup-in').value.trim();
-  if (!raw) { renderRestoreZone(false, 'Paste the text from Copy backup first.'); return; }
+  const raw = ($('#backup-in')?.value || '').trim();
+  ui.backupText = raw;
+  if (!raw) { setBackupMsg('Paste the text from Copy backup first.'); return; }
   try {
     const d = JSON.parse(raw);
     if (!valid(d)) throw new Error('shape');
-    pendingRestore = d; renderRestoreZone(true);
-  } catch (e) {
-    renderRestoreZone(false, "That text isn't a Turn Meter backup. Paste the full text from Copy backup.");
-  }
+    ui.restorePending = d; ui.backupMsg = ''; render();
+  } catch (e) { setBackupMsg("That text isn't a Turn Meter backup. Paste the full text from Copy backup."); }
 }
 
 /* ---------- Events ---------- */
@@ -793,42 +928,51 @@ document.addEventListener('click', e => {
   switch (a) {
     case 'new-open': ui.newOpen = true; render(); $('#np-name')?.focus(); break;
     case 'new-close': ui.newOpen = false; render(); break;
-    case 'clear-samples':
-      state.projects = state.projects.filter(x => !x.sample);
-      save(); render(); toast('Sample projects cleared.'); break;
+    case 'clear-samples': state.projects = state.projects.filter(x => !x.sample); save(); render(); toast('Samples cleared.'); break;
     case 'pause': if (p && t) pause(p, t); break;
     case 'resume': if (p && t) resume(p, t); break;
     case 'finish': if (p && t) finish(p, t); break;
     case 'reopen': if (p && t) reopen(p, t); break;
-    case 'edit-project': ui.editProject = true; render(); $('#ep-name')?.focus(); break;
+    case 'edit-project': ui.editProject = true; ui.confirm = null; render(); $('#ep-name')?.focus(); break;
     case 'cancel-edit-project': ui.editProject = false; render(); break;
     case 'edit-turn': if (t) { ui.editTurn = t.id; render(); $('#et-' + t.id)?.focus(); } break;
     case 'cancel-edit-turn': ui.editTurn = null; render(); break;
     case 'ask-delete-turn': if (t) { ui.confirm = 'turn:' + t.id; render(); } break;
-    case 'delete-turn':
-      if (p && t) { p.turns.splice(p.turns.indexOf(t), 1); ui.confirm = null; save(); render(); toast('Turn deleted.'); }
-      break;
-    case 'ask-delete-project': if (p) { ui.confirm = 'project:' + p.id; render(); } break;
+    case 'delete-turn': if (p && t) { p.turns.splice(p.turns.indexOf(t), 1); ui.confirm = null; save(); render(); toast('Turn deleted.'); } break;
+    case 'ask-delete-project': if (p) { ui.confirm = 'project:' + p.id; ui.editProject = false; render(); } break;
     case 'delete-project':
-      if (p) {
-        state.projects = state.projects.filter(x => x !== p); ui.confirm = null; save();
-        location.hash = ''; render(); toast(`Deleted ${p.name}.`);
-      }
+      if (p) { state.projects = state.projects.filter(x => x !== p); ui.confirm = null; save(); location.hash = ''; render(); toast(`Deleted ${p.name}.`); }
       break;
     case 'cancel-confirm': ui.confirm = null; render(); break;
+    case 'theme': state.settings.theme = b.dataset.themeChoice; applyTheme(); save(); renderChrome(route()); break;
+    case 'backup-toggle': ui.backupOpen = !ui.backupOpen; ui.restorePending = null; ui.backupMsg = ''; render(); break;
     case 'copy-backup': copyBackup(); break;
     case 'ask-restore': askRestore(); break;
-    case 'cancel-restore': pendingRestore = null; renderRestoreZone(false); break;
+    case 'cancel-restore': ui.restorePending = null; render(); break;
     case 'restore':
-      if (pendingRestore) {
-        state = normalize(pendingRestore); pendingRestore = null; save(); primeAlerts();
-        $('#backup-in').value = ''; renderRestoreZone(false, 'Restored.');
-        $('#chime').checked = !!state.settings.chime;
-        location.hash = ''; render();
+      if (ui.restorePending) {
+        state = normalize(ui.restorePending); ui.restorePending = null; ui.backupText = ''; ui.backupMsg = 'Restored.';
+        save(); primeAlerts(); location.hash = ''; render();
       }
       break;
   }
 });
+
+function showDay(cell, pin) {
+  const box = cell.closest('.hm'); if (!box) return;
+  const read = box.querySelector('.hm-read'), ms = +cell.dataset.ms, names = cell.dataset.names;
+  read.textContent = `${dayLabel(+cell.dataset.day)} · ${fmtHM(ms)}${box.dataset.scope === 'all' && names ? ` · ${names}` : ''}`;
+  read.classList.add('on');
+  if (pin) { box.querySelectorAll('.hm-cell.picked').forEach(c => c.classList.remove('picked')); cell.classList.add('picked'); }
+}
+document.addEventListener('pointerover', e => { const c = e.target.closest?.('.hm-cell[data-day]'); if (c) showDay(c, false); });
+document.addEventListener('pointerout', e => {
+  const c = e.target.closest?.('.hm-cell[data-day]'); if (!c) return;
+  const box = c.closest('.hm'), picked = box && box.querySelector('.hm-cell.picked');
+  if (picked) showDay(picked, false);
+  else if (box) { const r = box.querySelector('.hm-read'); r.textContent = r.dataset.default; r.classList.remove('on'); }
+});
+document.addEventListener('click', e => { const c = e.target.closest?.('.hm-cell[data-day]'); if (c) showDay(c, true); });
 
 document.addEventListener('submit', e => {
   e.preventDefault(); ensureAudio();
@@ -843,7 +987,7 @@ document.addEventListener('submit', e => {
   } else if (f.id === 'nt-form') {
     const p = getP(f.dataset.pid); if (p) startTurn(p, $('#nt-desc').value);
   } else if (f.classList.contains('edit-project')) {
-    const p = getP(f.dataset.pid); const name = $('#ep-name').value.trim();
+    const p = getP(f.dataset.pid), name = $('#ep-name').value.trim();
     if (p && name) { p.name = name; p.desc = $('#ep-desc').value.trim(); ui.editProject = false; save(); render(); }
   } else if (f.classList.contains('edit-turn')) {
     const p = getP(f.dataset.pid), t = p && p.turns.find(x => x.id === f.dataset.tid);
@@ -857,6 +1001,7 @@ document.addEventListener('input', e => {
   if (el.id === 'np-name') ui.draftName = el.value;
   else if (el.id === 'np-desc') ui.draftDesc = el.value;
   else if (el.id === 'nt-desc') ui.draftTurn = el.value;
+  else if (el.id === 'backup-in') ui.backupText = el.value;
   else if (el.id === 'turn-desc') {
     const p = getP(el.dataset.pid), t = p && p.turns.find(x => x.id === el.dataset.tid);
     if (!t) return;
@@ -869,15 +1014,14 @@ document.addEventListener('input', e => {
   }
 });
 
-document.addEventListener('toggle', e => {
-  const d = e.target;
-  if (d.matches && d.matches('details.segs')) d.open ? ui.openSegs.add(d.dataset.seg) : ui.openSegs.delete(d.dataset.seg);
-}, true);
+document.addEventListener('change', e => {
+  if (e.target.id === 'chime') { ensureAudio(); state.settings.chime = e.target.checked; save(); }
+});
 
 document.addEventListener('keydown', e => {
   if (e.code !== 'Space' || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
   const tag = (e.target.tagName || '').toLowerCase();
-  if (['input', 'textarea', 'select', 'button', 'summary', 'a'].includes(tag) || e.target.isContentEditable) return;
+  if (['input', 'textarea', 'select', 'button', 'a'].includes(tag) || e.target.isContentEditable) return;
   const r = route(); if (r.view !== 'project') return;
   const o = openTurn(r.p); if (!o) return;
   e.preventDefault(); ensureAudio();
@@ -895,10 +1039,7 @@ window.addEventListener('storage', e => {
 });
 
 /* ---------- Boot ---------- */
-const chimeBox = $('#chime');
-chimeBox.checked = !!state.settings.chime;
-chimeBox.addEventListener('change', () => { ensureAudio(); state.settings.chime = chimeBox.checked; save(); });
-if (!storageOK) $('#storage-warn').hidden = false;
+applyTheme();
 primeAlerts();
 save();
 render();
