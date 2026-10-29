@@ -200,6 +200,7 @@ textarea.inp{ resize:vertical; min-height:64px; line-height:1.5 }
 .dot.paused{ background:var(--amber); animation:none }
 .check{ display:inline-flex; gap:8px; align-items:center; cursor:pointer; font-size:13px; color:var(--muted) }
 .check input{ width:16px; height:16px; margin:0; accent-color:var(--jade) }
+.past-link{ display:flex; justify-content:flex-end; margin-top:10px }
 .foot{ margin-top:40px; display:flex; flex-direction:column; align-items:center; gap:12px }
 .theme{ display:flex; gap:2px; padding:2px; border-radius:999px; background:var(--line-2) }
 .theme-btn{ display:grid; place-items:center; width:32px; height:32px; padding:0; border:0; border-radius:999px; background:none; color:var(--muted); cursor:pointer; transition:color .12s, background-color .12s }
@@ -283,6 +284,7 @@ function normalize(d) {
     if (typeof p.id !== 'string' || !/^[a-z0-9-]+$/i.test(p.id)) p.id = uid();
     p.desc = p.desc || '';
     p.createdAt = p.createdAt || now();
+    p.archived = !!p.archived;
     p.turns.forEach(t => {
       if (typeof t.id !== 'string' || !/^[a-z0-9-]+$/i.test(t.id)) t.id = uid();
       t.desc = t.desc || '';
@@ -363,6 +365,7 @@ function fmtClock(ms) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`;
 }
+const fmtDate = ts => new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 const fmtTime = ts => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 function fmtDay(ts) {
   const d = new Date(ts), t = new Date(), y = new Date(); y.setDate(t.getDate() - 1);
@@ -495,7 +498,7 @@ function closeRunning(except) {
 function pausedNote(other) { if (other) toast(`Paused ${other.p.name}, turn ${other.p.turns.indexOf(other.t) + 1}.`); }
 
 function startTurn(p, desc) {
-  if (p.turns.length >= MAX_TURNS || openTurn(p)) return;
+  if (p.archived || p.turns.length >= MAX_TURNS || openTurn(p)) return;
   const other = closeRunning();
   p.turns.push({ id: uid(), desc: desc.trim(), createdAt: now(), done: false, manual: [], segments: [{ s: now(), e: null }] });
   ui.draftTurn = '';
@@ -503,7 +506,7 @@ function startTurn(p, desc) {
 }
 function pause(p, t) { if (!isRunning(t)) return; lastSeg(t).e = now(); save(); render(); }
 function resume(p, t) {
-  if (t.done || isRunning(t)) return;
+  if (p.archived || t.done || isRunning(t)) return;
   const other = closeRunning(t);
   t.segments.push({ s: now(), e: null });
   save(); render(); pausedNote(other);
@@ -514,11 +517,23 @@ function finish(p, t) {
   save(); render();
   toast(`Turn ${p.turns.indexOf(t) + 1} saved: ${fmtClock(turnMs(t))}`);
 }
-function reopen(p, t) { if (openTurn(p)) return; t.done = false; delete t.finishedAt; save(); render(); }
+function archive(p) {
+  p.turns.forEach(t => { if (isRunning(t)) lastSeg(t).e = now(); });
+  p.archived = true; p.archivedAt = now();
+  save(); location.hash = ''; render();
+  toast(`Moved ${p.name} to past projects.`);
+}
+function unarchive(p) {
+  p.archived = false; delete p.archivedAt;
+  save(); render();
+  toast(`${p.name} is back in current projects.`);
+}
+function reopen(p, t) { if (p.archived || openTurn(p)) return; t.done = false; delete t.finishedAt; save(); render(); }
 
 /* ---------- Pieces ---------- */
 function route() {
   const h = location.hash.slice(1);
+  if (h === 'past') return { view: 'past' };
   if (h.startsWith('p-')) { const p = getP(h.slice(2)); if (p) return { view: 'project', p }; }
   return { view: 'home' };
 }
@@ -576,11 +591,12 @@ function confirmBox(msg, action, attrs) {
 
 /* ---------- Home ---------- */
 function viewHome() {
-  const ps = [...state.projects].sort((a, b) => lastActivity(b) - lastActivity(a));
-  const n = now();
-  const total = ps.reduce((a, p) => a + projectMs(p, n), 0);
-  const turns = ps.reduce((a, p) => a + p.turns.length, 0);
-  const samples = ps.filter(p => p.sample);
+  const all = state.projects, n = now();
+  const ps = all.filter(p => !p.archived).sort((a, b) => lastActivity(b) - lastActivity(a));
+  const past = all.length - ps.length;
+  const total = all.reduce((a, p) => a + projectMs(p, n), 0);
+  const turns = all.reduce((a, p) => a + p.turns.length, 0);
+  const samples = all.filter(p => p.sample);
   const showForm = ui.newOpen || ps.length === 0;
   return `
     ${!storageOK ? `<div class="banner"><span>This browser is blocking storage, so projects will be lost when you close the page.</span></div>` : ''}
@@ -588,22 +604,38 @@ function viewHome() {
     <section class="grand">
       <div class="eyebrow">Time across all projects</div>
       <div class="grand-amt" data-live="grand">${fmtClock(total)}</div>
-      <div class="grand-sub">${plural(ps.length, 'project')} · ${plural(turns, 'turn')}</div>
+      <div class="grand-sub">${ps.length} current${past ? ` · ${past} past` : ''} · ${plural(turns, 'turn')}</div>
     </section>
-    ${showForm ? newProjectForm(ps.length === 0) : ''}
+    ${showForm ? newProjectForm(all.length === 0, ps.length > 0) : ''}
     ${ps.length ? `<ul class="cards" style="${showForm ? 'margin-top:22px' : ''}">${ps.map(projectCard).join('')}</ul>` : ''}
-    <div class="controls">
+    <div class="past-link"><a class="linkbtn" href="#past">Past projects${past ? ` (${past})` : ''} →</a></div>
+    <div class="controls" style="margin-top:12px">
       ${showForm ? '' : `<button class="btn primary" type="button" data-action="new-open">New project</button>`}
       <button class="btn" type="button" data-action="backup-toggle" aria-expanded="${ui.backupOpen}">Backup and restore</button>
     </div>
     ${ui.backupOpen ? backupPanel() : ''}
-    ${ps.length ? heatmap('all') : ''}`;
+    ${all.length ? heatmap('all') : ''}`;
 }
 
-function newProjectForm(first) {
+function viewPast() {
+  const n = now();
+  const ps = state.projects.filter(p => p.archived).sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
+  const total = ps.reduce((a, p) => a + projectMs(p, n), 0);
+  return `
+    <section class="grand">
+      <div class="eyebrow">Past projects</div>
+      <div class="grand-amt">${fmtClock(total)}</div>
+      <div class="grand-sub">${plural(ps.length, 'project')} · ${plural(ps.reduce((a, p) => a + p.turns.length, 0), 'turn')}</div>
+    </section>
+    ${ps.length
+      ? `<ul class="cards">${ps.map(projectCard).join('')}</ul>`
+      : `<div class="panel"><p class="empty">No past projects yet. To move one here, open it and choose <b>Move to past projects</b> at the bottom.</p></div>`}`;
+}
+
+function newProjectForm(first, canCancel) {
   return `
     <form class="face" id="np-form" autocomplete="off">
-      <div class="face-top"><h2 class="plate-name">${first ? 'Create your first project' : 'New project'}</h2>${first ? '' : '<button type="button" class="linkbtn" data-action="new-close">Cancel</button>'}</div>
+      <div class="face-top"><h2 class="plate-name">${first ? 'Create your first project' : 'New project'}</h2>${canCancel ? '<button type="button" class="linkbtn" data-action="new-close">Cancel</button>' : ''}</div>
       <div class="field first"><label for="np-name">Name</label><input class="inp" type="text" id="np-name" maxlength="80" required placeholder="Camera app" value="${esc(ui.draftName)}"></div>
       <div class="field"><label for="np-desc">Description</label><textarea class="inp" id="np-desc" rows="2" maxlength="800" placeholder="What is this project about?">${esc(ui.draftDesc)}</textarea></div>
       <div class="controls"><button class="btn primary" type="submit">Create project</button></div>
@@ -613,7 +645,8 @@ function newProjectForm(first) {
 function projectCard(p) {
   const o = openTurn(p), n = p.turns.length;
   let meta, dot = '';
-  if (o) {
+  if (p.archived) meta = `Moved to past ${fmtDate(p.archivedAt || p.createdAt)} · ${n} of ${MAX_TURNS} turns`;
+  else if (o) {
     const run = isRunning(o);
     dot = `<span class="dot${run ? '' : ' paused'}"></span>`;
     meta = `Turn ${p.turns.indexOf(o) + 1} of ${MAX_TURNS} · ${run ? 'running' : 'paused'}`;
@@ -666,7 +699,9 @@ function viewProject(p) {
     <section class="sec">
       ${ui.editProject ? editProjectForm(p)
         : ui.confirm === 'project:' + p.id ? `<div class="panel">${confirmBox(`Delete ${esc(p.name)} and its ${plural(p.turns.length, 'turn')}? This can't be undone.`, 'delete-project', ids(p))}</div>`
-        : `<div class="row-links" style="justify-content:center;margin:0"><button class="linkbtn" type="button" data-action="edit-project" ${ids(p)}>Edit project</button><button class="linkbtn danger" type="button" data-action="ask-delete-project" ${ids(p)}>Delete project</button></div>`}
+        : `<div class="row-links" style="justify-content:center;flex-wrap:wrap;margin:0"><button class="linkbtn" type="button" data-action="edit-project" ${ids(p)}>Edit project</button>${p.archived
+            ? `<button class="linkbtn" type="button" data-action="unarchive" ${ids(p)}>Move back to current projects</button>`
+            : `<button class="linkbtn" type="button" data-action="archive" ${ids(p)}>Move to past projects</button>`}<button class="linkbtn danger" type="button" data-action="ask-delete-project" ${ids(p)}>Delete project</button></div>`}
     </section>`;
 }
 
@@ -678,6 +713,16 @@ function face(p) {
       <span class="state ${cls}">${pill}</span>
     </div>`;
 
+  if (p.archived) {
+    return `
+      <section class="face" aria-label="Past project">
+        ${top('Past', '')}
+        <div class="eyebrow">Total across ${plural(p.turns.length, 'turn')}</div>
+        <div class="clock">${fmtClock(projectMs(p, n))}</div>
+        <div class="clock-note">Moved to past projects on ${fmtDate(p.archivedAt || n)}. Move it back to start or resume turns.</div>
+        <div class="controls"><button class="btn primary" type="button" data-action="unarchive" ${ids(p)}>Move back to current projects</button></div>
+      </section>`;
+  }
   if (o) {
     const i = p.turns.indexOf(o) + 1, run = isRunning(o), ms = turnMs(o, n);
     return `
@@ -772,7 +817,7 @@ function turnRow(p, t, i) {
   }
 
   const links = [`<button class="linkbtn" type="button" data-action="edit-turn" ${ids(p, t)}>Edit</button>`];
-  if (t.done && i === p.turns.length - 1 && !openTurn(p)) links.push(`<button class="linkbtn" type="button" data-action="reopen" ${ids(p, t)}>Reopen</button>`);
+  if (!p.archived && t.done && i === p.turns.length - 1 && !openTurn(p)) links.push(`<button class="linkbtn" type="button" data-action="reopen" ${ids(p, t)}>Reopen</button>`);
   return `
     <div class="row">
       <div>
@@ -796,9 +841,11 @@ function editProjectForm(p) {
 
 /* ---------- Render ---------- */
 function renderChrome(r) {
-  $('#topbar').innerHTML = r.view === 'project'
-    ? `<a class="mark" href="#">Turn Meter</a><a class="linkbtn" href="#">← All projects</a>`
-    : `<a class="mark" href="#">Turn Meter</a><span class="top-note">5 turns × 60 min</span>`;
+  $('#topbar').innerHTML = r.view === 'project' && r.p.archived
+    ? `<a class="mark" href="#">Turn Meter</a><a class="linkbtn" href="#past">← Past projects</a>`
+    : r.view === 'home'
+      ? `<a class="mark" href="#">Turn Meter</a><span class="top-note">5 turns × 60 min</span>`
+      : `<a class="mark" href="#">Turn Meter</a><a class="linkbtn" href="#">← All projects</a>`;
   const run = findRunning();
   const show = !!run && !(r.view === 'project' && r.p === run.p);
   $('#runbar').innerHTML = show ? `
@@ -819,7 +866,7 @@ function renderChrome(r) {
 function render() {
   const r = route();
   renderChrome(r);
-  $('#view').innerHTML = r.view === 'project' ? viewProject(r.p) : viewHome();
+  $('#view').innerHTML = r.view === 'project' ? viewProject(r.p) : r.view === 'past' ? viewPast() : viewHome();
   document.querySelectorAll('.hm-scroll').forEach(el => { el.scrollLeft = el.scrollWidth; });
   updateLive();
 }
@@ -974,6 +1021,8 @@ document.addEventListener('click', e => {
     case 'resume': if (p && t) resume(p, t); break;
     case 'finish': if (p && t) finish(p, t); break;
     case 'reopen': if (p && t) reopen(p, t); break;
+    case 'archive': if (p) archive(p); break;
+    case 'unarchive': if (p) unarchive(p); break;
     case 'edit-project': ui.editProject = true; ui.confirm = null; render(); $('#ep-name')?.focus(); break;
     case 'cancel-edit-project': ui.editProject = false; render(); break;
     case 'edit-turn': if (t) { ui.editTurn = t.id; ui.confirm = null; render(); $('#et-desc')?.focus(); } break;
@@ -1079,7 +1128,7 @@ document.addEventListener('keydown', e => {
   if (e.code !== 'Space' || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
   const tag = (e.target.tagName || '').toLowerCase();
   if (['input', 'textarea', 'select', 'button', 'a'].includes(tag) || e.target.isContentEditable) return;
-  const r = route(); if (r.view !== 'project') return;
+  const r = route(); if (r.view !== 'project' || r.p.archived) return;
   const o = openTurn(r.p); if (!o) return;
   e.preventDefault(); ensureAudio();
   isRunning(o) ? pause(r.p, o) : resume(r.p, o);
