@@ -200,6 +200,15 @@ textarea.inp{ resize:vertical; min-height:64px; line-height:1.5 }
 .dot.paused{ background:var(--amber); animation:none }
 .check{ display:inline-flex; gap:8px; align-items:center; cursor:pointer; font-size:13px; color:var(--muted) }
 .check input{ width:16px; height:16px; margin:0; accent-color:var(--jade) }
+.panel hr{ border:0; border-top:1px solid var(--line-2); margin:20px 0 16px }
+.obs-state{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13.5px }
+.obs-dot{ width:8px; height:8px; border-radius:50%; background:var(--faint); flex:none }
+.obs-dot.ok{ background:var(--jade) }
+.obs-dot.warn{ background:var(--amber) }
+.obs .controls{ margin-top:12px }
+.obs-pending{ margin:14px 0 0 }
+.obs-pending .controls{ margin-top:0 }
+.err{ color:var(--flag); font-size:12.5px; margin-top:8px }
 .past-link{ display:flex; justify-content:flex-end; margin-top:10px }
 .foot{ margin-top:40px; display:flex; flex-direction:column; align-items:center; gap:12px }
 .theme{ display:flex; gap:2px; padding:2px; border-radius:999px; background:var(--line-2) }
@@ -280,6 +289,7 @@ function valid(d) {
 }
 function normalize(d) {
   d.settings = Object.assign({ chime: true, theme: 'system' }, d.settings || {});
+  d.settings.obsidian = Object.assign({ folder: 'Turn Meter', vault: '' }, d.settings.obsidian || {});
   d.projects.forEach(p => {
     if (typeof p.id !== 'string' || !/^[a-z0-9-]+$/i.test(p.id)) p.id = uid();
     p.desc = p.desc || '';
@@ -308,10 +318,14 @@ function load() {
   }
   return normalize(seed());
 }
-function save() {
-  if (!storageOK) return;
-  try { localStorage.setItem(KEY, JSON.stringify(state)); }
-  catch (e) { storageOK = false; render(); }
+function save(opts) {
+  const quiet = !!(opts && opts.quiet);
+  if (!quiet) state.savedAt = now();
+  if (storageOK) {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); }
+    catch (e) { storageOK = false; render(); }
+  }
+  if (!quiet) scheduleObs();
 }
 
 function seed() {
@@ -342,7 +356,8 @@ let state = load();
 const ui = {
   newOpen: false, editProject: false, editTurn: null, confirm: null,
   draftName: '', draftDesc: '', draftTurn: '',
-  backupOpen: false, backupText: '', backupMsg: '', restorePending: null
+  backupOpen: false, backupText: '', backupMsg: '', restorePending: null,
+  obsOpen: false
 };
 
 /* ---------- Time math ---------- */
@@ -601,6 +616,7 @@ function viewHome() {
   return `
     ${!storageOK ? `<div class="banner"><span>This browser is blocking storage, so projects will be lost when you close the page.</span></div>` : ''}
     ${samples.length ? `<div class="banner"><span>${samples.map(p => esc(p.name)).join(' and ')} ${samples.length > 1 ? 'are samples' : 'is a sample'} to show how turns look.</span><button class="btn sm" type="button" data-action="clear-samples">Clear samples</button></div>` : ''}
+    ${obsBanner()}
     <section class="grand">
       <div class="eyebrow">Time across all projects</div>
       <div class="grand-amt" data-live="grand">${fmtClock(total)}</div>
@@ -612,8 +628,10 @@ function viewHome() {
     <div class="controls" style="margin-top:12px">
       ${showForm ? '' : `<button class="btn primary" type="button" data-action="new-open">New project</button>`}
       <button class="btn" type="button" data-action="backup-toggle" aria-expanded="${ui.backupOpen}">Backup and restore</button>
+      <button class="btn" type="button" data-action="obs-toggle" aria-expanded="${ui.obsOpen}">Obsidian</button>
     </div>
     ${ui.backupOpen ? backupPanel() : ''}
+    ${ui.obsOpen ? obsPanel() : ''}
     ${all.length ? heatmap('all') : ''}`;
 }
 
@@ -699,7 +717,7 @@ function viewProject(p) {
     <section class="sec">
       ${ui.editProject ? editProjectForm(p)
         : ui.confirm === 'project:' + p.id ? `<div class="panel">${confirmBox(`Delete ${esc(p.name)} and its ${plural(p.turns.length, 'turn')}? This can't be undone.`, 'delete-project', ids(p))}</div>`
-        : `<div class="row-links" style="justify-content:center;flex-wrap:wrap;margin:0"><button class="linkbtn" type="button" data-action="edit-project" ${ids(p)}>Edit project</button>${p.archived
+        : `<div class="row-links" style="justify-content:center;flex-wrap:wrap;margin:0"><button class="linkbtn" type="button" data-action="edit-project" ${ids(p)}>Edit project</button><button class="linkbtn" type="button" data-action="obs-send" ${ids(p)}>Send to Obsidian</button>${p.archived
             ? `<button class="linkbtn" type="button" data-action="unarchive" ${ids(p)}>Move back to current projects</button>`
             : `<button class="linkbtn" type="button" data-action="archive" ${ids(p)}>Move to past projects</button>`}<button class="linkbtn danger" type="button" data-action="ask-delete-project" ${ids(p)}>Delete project</button></div>`}
     </section>`;
@@ -966,6 +984,7 @@ function updateTitle(run) {
 function tick() {
   updateLive();
   const run = findRunning();
+  if (run && vault.handle && vault.perm === 'granted' && !vault.pending && !obsBusy && now() - vault.lastAttempt > 5 * 60e3) obsSync(false);
   if (run) {
     const i = run.p.turns.indexOf(run.t) + 1;
     if (turnMs(run.t) >= TURN_MS && !alerted.has(run.t.id + ':hour')) {
@@ -978,6 +997,274 @@ function tick() {
     }
   }
   updateTitle(run);
+}
+
+/* ---------- Obsidian ---------- */
+const OBS_MARK = '%% Turn Meter updates everything above this line. Anything you write below it is kept. %%';
+const OBS_OVERVIEW = 'Turn Meter Overview';
+const DATA_FILE = 'turn-meter-data.json';
+const vault = { handle: null, name: '', perm: 'none', lastSync: 0, lastAttempt: 0, error: '', warn: '', pending: null, lastData: '' };
+let obsBusy = false, obsAgain = false, obsTimer = null;
+
+const obsCfg = () => (state.settings.obsidian = Object.assign({ folder: 'Turn Meter', vault: '' }, state.settings.obsidian || {}));
+const fsOK = () => typeof window.showDirectoryPicker === 'function' && topLevel && window.isSecureContext;
+function safeName(name) {
+  return String(name ?? '').replace(/[\\/:*?"<>|#^\[\]]/g, '-').replace(/\s+/g, ' ').trim().replace(/^\.+/, '').slice(0, 100);
+}
+function obsFolderParts() { const parts = String(obsCfg().folder || '').split('/').map(safeName).filter(Boolean); return parts.length ? parts : ['Turn Meter']; }
+const obsFolderPath = () => obsFolderParts().join('/');
+async function obsDir(create) { let d = vault.handle; for (const part of obsFolderParts()) d = await d.getDirectoryHandle(part, { create }); return d; }
+async function readText(dir, name) { try { const fh = await dir.getFileHandle(name); return await (await fh.getFile()).text(); } catch (e) { return null; } }
+async function writeText(dir, name, text) { const fh = await dir.getFileHandle(name, { create: true }); const w = await fh.createWritable(); await w.write(text); await w.close(); }
+
+/* Small key-value store for the folder handle (IndexedDB keeps it across restarts). */
+function idb(mode, fn) {
+  return new Promise((res, rej) => {
+    let req; try { req = indexedDB.open('turn-meter', 1); } catch (e) { rej(e); return; }
+    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    req.onerror = () => rej(req.error);
+    req.onsuccess = () => {
+      const db = req.result; let r;
+      try { const tx = db.transaction('kv', mode); r = fn(tx.objectStore('kv')); tx.oncomplete = () => { db.close(); res(r && r.result); }; tx.onerror = () => { db.close(); rej(tx.error); }; }
+      catch (e) { db.close(); rej(e); }
+    };
+  });
+}
+const kvGet = k => idb('readonly', st => st.get(k));
+const kvSet = (k, v) => idb('readwrite', st => st.put(v, k));
+const kvDel = k => idb('readwrite', st => st.delete(k));
+
+/* ---- Markdown ---- */
+const mdCell = x => String(x ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+const hhmm = ts => { const d = new Date(ts); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const stamp = ts => `${dayKey(ts)} ${hhmm(ts)}`;
+const stripUpd = x => String(x ?? '').replace(/^updated: .*$/m, '').replace(/Updated \d{4}-\d\d-\d\d \d\d:\d\d/g, '');
+function projectStatus(p) {
+  if (p.archived) return 'past';
+  const o = openTurn(p); if (o) return isRunning(o) ? 'running' : 'paused';
+  return p.turns.length >= MAX_TURNS ? 'done' : p.turns.length ? 'idle' : 'not started';
+}
+function noteNames() {
+  const used = new Set([OBS_OVERVIEW.toLowerCase()]), out = new Map();
+  [...state.projects].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)).forEach(p => {
+    const base = safeName(p.name) || 'Untitled'; let name = base, i = 2;
+    while (used.has(name.toLowerCase())) name = `${base} (${i++})`;
+    used.add(name.toLowerCase()); out.set(p.id, name);
+  });
+  return out;
+}
+function turnWhen(t) {
+  const first = t.segments[0], last = lastSeg(t);
+  if (!first) return dayKey(t.createdAt);
+  const end = t.done ? (last && last.e) || t.finishedAt : null;
+  return `${stamp(first.s)}–${end ? (dayKey(end) === dayKey(first.s) ? hhmm(end) : stamp(end)) : ''}`;
+}
+function projectMd(p, n) {
+  const total = projectMs(p, n), br = projectBreaks(p, n), left = BUDGET_MS - total;
+  const L = ['---', 'tags:', '  - turn-meter', `project: ${JSON.stringify(p.name)}`, `status: ${projectStatus(p)}`,
+    `turns_used: ${p.turns.length}`, `turns_max: ${MAX_TURNS}`, `total: "${fmtClock(total)}"`, `total_hours: ${(total / HOUR).toFixed(2)}`,
+    `budget_hours: ${BUDGET_MS / HOUR}`, `breaks: "${fmtClock(br.ms)}"`, `started: ${dayKey(p.createdAt)}`, `updated: "${stamp(n)}"`, '---',
+    `# ${p.name}`, ''];
+  if (p.desc) L.push(p.desc, '');
+  L.push(`**Total** ${fmtClock(total)} of ${fmtClock(BUDGET_MS)} · **${left >= 0 ? 'Left' : 'Over'}** ${fmtClock(Math.abs(left))} · **Turns** ${p.turns.length} of ${MAX_TURNS} · **Breaks** ${br.c} (${fmtClock(br.ms)})`, '');
+  if (p.turns.length) {
+    L.push('| Turn | When | Time | Breaks | What it was about |', '| ---: | --- | ---: | --- | --- |');
+    p.turns.forEach((t, i) => {
+      const ms = turnMs(t, n), mm = manualMs(t), bc = breakCount(t);
+      let time = fmtClock(ms);
+      if (ms > TURN_MS) time += ` (+${fmtClock(ms - TURN_MS)} over)`;
+      if (mm) time += ` (${mm > 0 ? '+' : '−'}${fmtClock(Math.abs(mm))} by hand)`;
+      const st = t.done ? '' : isRunning(t) ? ' (running)' : ' (paused)';
+      L.push(`| ${i + 1} | ${mdCell(turnWhen(t) + st)} | ${time} | ${bc ? `${bc} (${fmtClock(gapsMs(t) + curBreakMs(t, n))})` : '–'} | ${mdCell(t.desc) || '–'} |`);
+    });
+  } else L.push('_No turns yet._');
+  L.push('', `Back to [[${OBS_OVERVIEW}]] · Updated ${stamp(n)}`, '', OBS_MARK, '');
+  return L.join('\n');
+}
+function overviewMd(names, list, n) {
+  const cur = list.filter(p => !p.archived), past = list.filter(p => p.archived);
+  const total = list.reduce((a, p) => a + projectMs(p, n), 0);
+  const table = ps => ps.length
+    ? ['| Project | Status | Turns | Time |', '| --- | --- | ---: | ---: |', ...ps.map(p => `| [[${names.get(p.id)}]] | ${projectStatus(p)} | ${p.turns.length} / ${MAX_TURNS} | ${fmtClock(projectMs(p, n))} |`)]
+    : ['_None._'];
+  const daily = dailyTotals(list, n), rows = []; let sum = 0;
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(n); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - i);
+    const r = daily.get(dayKey(d.getTime())), ms = r ? Math.max(0, r.ms) : 0;
+    if (ms > 0) { sum += ms; rows.push(`| ${dayKey(d.getTime())} ${DAY_NAMES[d.getDay()]} | ${fmtHM(ms)} | ${mdCell([...r.names].join(', '))} |`); }
+  }
+  return ['---', 'tags:', '  - turn-meter', `total_hours: ${(total / HOUR).toFixed(2)}`, `updated: "${stamp(n)}"`, '---', '# Turn Meter', '',
+    `**Total across all projects** ${fmtClock(total)} · ${cur.length} current · ${past.length} past`, '',
+    '## Current projects', ...table(cur), '', '## Past projects', ...table(past), '',
+    '## Hours per day (last 14 days)',
+    ...(rows.length ? ['| Day | Worked | Projects |', '| --- | ---: | --- |', ...rows, '', `**14-day total** ${fmtHM(sum)}`] : ['_No work logged in the last 14 days._']),
+    '', `Updated ${stamp(n)}`, '', OBS_MARK, ''].join('\n');
+}
+function keepUserNotes(old, fresh) {
+  if (old == null) return fresh;
+  const i = old.indexOf(OBS_MARK);
+  if (i < 0) return fresh + '\n' + old;
+  return fresh.slice(0, -1) + (old.slice(i + OBS_MARK.length) || '\n');
+}
+
+/* ---- Folder sync ---- */
+function scheduleObs() {
+  if (!vault.handle || vault.perm !== 'granted' || vault.pending) return;
+  clearTimeout(obsTimer);
+  obsTimer = setTimeout(() => { obsTimer = null; obsSync(false); }, 1500);
+}
+async function obsSync(manual) {
+  if (!vault.handle || vault.perm !== 'granted' || vault.pending) return;
+  if (obsBusy) { obsAgain = true; return; }
+  obsBusy = true; vault.lastAttempt = now(); vault.error = '';
+  try {
+    const n = now(), dir = await obsDir(true), names = noteNames(), taken = new Set(names.values());
+    const list = state.projects.filter(p => !p.sample);
+    for (const p of list) {
+      const name = names.get(p.id);
+      let old = await readText(dir, name + '.md'), prevText = null;
+      const prev = p.obsFile && p.obsFile !== name && !taken.has(p.obsFile) ? p.obsFile : null;
+      if (prev) { prevText = await readText(dir, prev + '.md'); if (old == null && prevText != null) old = prevText; }
+      const merged = keepUserNotes(old, projectMd(p, n));
+      if (old == null || stripUpd(merged) !== stripUpd(old)) await writeText(dir, name + '.md', merged);
+      if (prevText != null && prevText.includes(OBS_MARK)) { try { await dir.removeEntry(prev + '.md'); } catch (e) {} }
+      p.obsFile = name;
+    }
+    const oldOv = await readText(dir, OBS_OVERVIEW + '.md'), ov = keepUserNotes(oldOv, overviewMd(names, list, n));
+    if (oldOv == null || stripUpd(ov) !== stripUpd(oldOv)) await writeText(dir, OBS_OVERVIEW + '.md', ov);
+    save({ quiet: true });
+    const data = JSON.stringify(state, null, 1);
+    if (data !== vault.lastData) { await writeText(dir, DATA_FILE, data); vault.lastData = data; }
+    vault.lastSync = n;
+    if (manual) toast(`Updated ${plural(list.length, 'project note')} in Obsidian.`);
+  } catch (e) {
+    if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) { vault.perm = 'prompt'; }
+    else if (e && e.name === 'NotFoundError') vault.error = 'The vault folder was moved or deleted. Disconnect and connect it again.';
+    else vault.error = `Couldn't write to the vault: ${(e && e.message) || e}`;
+  }
+  obsBusy = false;
+  refreshObsUI();
+  if (obsAgain) { obsAgain = false; obsSync(false); }
+}
+async function readRemote() {
+  try { const t = await readText(await obsDir(false), DATA_FILE); if (!t) return null; const d = JSON.parse(t); return valid(d) ? d : null; }
+  catch (e) { return null; }
+}
+const sameProjects = d => JSON.stringify(d.projects) === JSON.stringify(state.projects);
+async function obsCheckThenSync(firstTime, manual) {
+  const r = await readRemote();
+  if (r && r.projects.length && !sameProjects(r) && (firstTime || (r.savedAt || 0) > (state.savedAt || 0))) { vault.pending = r; refreshObsUI(); return; }
+  await obsSync(manual);
+}
+async function obsConnect() {
+  if (!fsOK()) return;
+  let h;
+  try { h = await window.showDirectoryPicker({ id: 'turn-meter-vault', mode: 'readwrite' }); }
+  catch (e) { if (!e || e.name !== 'AbortError') { vault.error = `Couldn't open that folder: ${(e && e.message) || e}`; refreshObsUI(); } return; }
+  Object.assign(vault, { handle: h, name: h.name, perm: 'granted', error: '', warn: '', pending: null, lastData: '' });
+  try { await h.getDirectoryHandle('.obsidian'); } catch (e) { vault.warn = `"${h.name}" has no .obsidian folder, so it may not be a vault's main folder. Notes still go to ${h.name}/${obsFolderPath()}/.`; }
+  try { await kvSet('vault', h); } catch (e) {}
+  refreshObsUI();
+  await obsCheckThenSync(true, true);
+}
+async function obsReconnect() {
+  if (!vault.handle) return;
+  try { vault.perm = (await vault.handle.requestPermission({ mode: 'readwrite' })) === 'granted' ? 'granted' : 'prompt'; }
+  catch (e) { vault.error = `Couldn't get access: ${(e && e.message) || e}`; }
+  refreshObsUI();
+  if (vault.perm === 'granted') await obsCheckThenSync(false, true);
+}
+async function obsDisconnect() {
+  try { await kvDel('vault'); } catch (e) {}
+  Object.assign(vault, { handle: null, name: '', perm: 'none', error: '', warn: '', pending: null, lastSync: 0, lastData: '' });
+  refreshObsUI(); toast('Disconnected. Notes already in the vault stay there.');
+}
+async function obsInit() {
+  if (!fsOK()) return;
+  let h = null; try { h = await kvGet('vault'); } catch (e) {}
+  if (!h) return;
+  vault.handle = h; vault.name = h.name;
+  let perm = 'prompt'; try { perm = await h.queryPermission({ mode: 'readwrite' }); } catch (e) {}
+  vault.perm = perm === 'granted' ? 'granted' : 'prompt';
+  refreshObsUI();
+  if (vault.perm === 'granted') await obsCheckThenSync(false, false);
+}
+
+/* ---- Send one note through an obsidian:// link (any browser) ---- */
+function obsSend(p) {
+  const cfg = obsCfg();
+  if (!cfg.vault) {
+    ui.obsOpen = true; location.hash = ''; render();
+    setTimeout(() => $('#obs-vault')?.focus(), 30);
+    toast('Type your vault name first, then send again.');
+    return;
+  }
+  const md = projectMd(p, now());
+  const base = `obsidian://new?vault=${encodeURIComponent(cfg.vault)}&file=${encodeURIComponent(`${obsFolderPath()}/${noteNames().get(p.id)}`)}&overwrite=true`;
+  const open = uri => { const a = document.createElement('a'); a.href = uri; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); };
+  const withContent = `${base}&content=${encodeURIComponent(md)}`;
+  if (withContent.length <= 1900) { open(withContent); toast('Opening Obsidian…'); return; }
+  try {
+    navigator.clipboard.writeText(md).then(() => { open(`${base}&clipboard=true`); toast('Opening Obsidian…'); },
+      () => toast('This note is too long for a link and the clipboard is blocked. Connect your vault folder instead.'));
+  } catch (e) { toast('This note is too long for a link and the clipboard is blocked. Connect your vault folder instead.'); }
+}
+
+/* ---- Obsidian UI ---- */
+function obsPendingBox() {
+  const r = vault.pending;
+  return `<div class="banner obs-pending"><span>Your vault has Turn Meter data${r.savedAt ? ` saved ${fmtDate(r.savedAt)}, ${fmtTime(r.savedAt)}` : ''} with ${plural(r.projects.length, 'project')}. Load it into this browser, or keep this browser's ${plural(state.projects.length, 'project')} and replace the vault copy?</span><div class="controls"><button class="btn sm primary" type="button" data-action="obs-take">Load vault data</button><button class="btn sm" type="button" data-action="obs-keep">Keep this browser's data</button></div></div>`;
+}
+function obsBanner() {
+  let h = '';
+  if (!ui.obsOpen) {
+    if (vault.pending) h = obsPendingBox();
+    else if (vault.handle && vault.perm === 'prompt') h = `<div class="banner"><span>Obsidian notes are paused until you allow access to <b>${esc(vault.name)}</b> again.</span><button class="btn sm" type="button" data-action="obs-reconnect">Reconnect</button></div>`;
+    else if (vault.error) h = `<div class="banner"><span>${esc(vault.error)}</span><button class="btn sm" type="button" data-action="obs-toggle">Open Obsidian settings</button></div>`;
+  }
+  return `<div id="obs-banner">${h}</div>`;
+}
+function obsStatus() {
+  let h;
+  if (!fsOK()) {
+    h = topLevel
+      ? `<p class="hint">Automatic notes need Chrome or Edge on a computer. In this browser, use <b>Send to Obsidian</b> on a project page.</p>`
+      : `<p class="hint">To connect a vault, open Turn Meter from its own site, <span class="num">likelystudying.github.io/turn-meter</span>. Browsers don't allow folder access inside an embedded page. <b>Send to Obsidian</b> on a project page may still work here.</p>`;
+  } else if (!vault.handle) {
+    h = `<div class="obs-state"><span class="obs-dot"></span><span>Not connected</span></div>
+      <p class="hint">Pick your vault's main folder. Turn Meter writes its notes into <span class="num">${esc(obsFolderPath())}/</span> inside it.</p>
+      <div class="controls"><button class="btn sm primary" type="button" data-action="obs-connect">Connect vault folder</button></div>`;
+  } else if (vault.perm !== 'granted') {
+    h = `<div class="obs-state"><span class="obs-dot warn"></span><span>Paused: <b>${esc(vault.name)}</b> needs your permission again</span></div>
+      <p class="hint">Browsers ask again after a restart. In Chrome, choose <b>Allow on every visit</b> to skip this next time.</p>
+      <div class="controls"><button class="btn sm primary" type="button" data-action="obs-reconnect">Reconnect</button><button class="btn sm" type="button" data-action="obs-disconnect">Disconnect</button></div>`;
+  } else {
+    h = `<div class="obs-state"><span class="obs-dot ok"></span><span>Connected to <b>${esc(vault.name)}</b>${vault.lastSync ? ` · updated ${fmtTime(vault.lastSync)}` : ''}</span></div>
+      ${vault.warn ? `<p class="hint">${esc(vault.warn)}</p>` : ''}
+      <div class="controls"><button class="btn sm" type="button" data-action="obs-sync">Update notes now</button><button class="btn sm" type="button" data-action="obs-load">Load data from vault</button><button class="btn sm" type="button" data-action="obs-disconnect">Disconnect</button></div>`;
+  }
+  if (vault.error) h += `<p class="err">${esc(vault.error)}</p>`;
+  if (vault.pending) h += obsPendingBox();
+  return `<div id="obs-status">${h}</div>`;
+}
+function obsPanel() {
+  const cfg = obsCfg();
+  return `
+    <section class="panel obs" style="margin-top:12px">
+      <div class="sec-head" style="padding:0 0 8px"><span class="eyebrow">Obsidian</span><button class="linkbtn" type="button" data-action="obs-toggle">Close</button></div>
+      <p class="hint">Turn Meter keeps a note for each project in your vault, plus <b>${OBS_OVERVIEW}</b> with hours per day. Notes update by themselves as you work. Anything you write below the line <i>“Turn Meter updates everything above this line”</i> is kept.</p>
+      <div style="margin-top:14px">${obsStatus()}</div>
+      <div class="field"><label for="obs-folder">Folder inside the vault</label><input class="inp" type="text" id="obs-folder" maxlength="120" value="${esc(cfg.folder)}" placeholder="Turn Meter"></div>
+      <p class="hint" style="margin-top:8px">A backup of all your data is saved there too, as <span class="num">${DATA_FILE}</span>. If the vault syncs between computers, use <b>Load data from vault</b> on the other computer to pick it up.</p>
+      <hr>
+      <div class="eyebrow">Send to Obsidian</div>
+      <p class="hint" style="margin-top:6px">For Safari, Firefox or a phone with Obsidian installed. <b>Send to Obsidian</b> on a project page opens Obsidian and replaces that project's note with the latest numbers. Anything you wrote in that note is replaced too, so if you also connected the vault folder, you don't need this.</p>
+      <div class="field"><label for="obs-vault">Vault name, as shown in Obsidian</label><input class="inp" type="text" id="obs-vault" maxlength="120" value="${esc(cfg.vault)}" placeholder="My vault"></div>
+    </section>`;
+}
+function refreshObsUI() {
+  const b = $('#obs-banner'); if (b) b.outerHTML = obsBanner();
+  const st = $('#obs-status'); if (st) st.outerHTML = obsStatus();
 }
 
 /* ---------- Backup ---------- */
@@ -1036,6 +1323,28 @@ document.addEventListener('click', e => {
       break;
     case 'cancel-confirm': ui.confirm = null; render(); break;
     case 'theme': state.settings.theme = b.dataset.themeChoice; applyTheme(); save(); renderChrome(route()); break;
+    case 'obs-toggle': ui.obsOpen = !ui.obsOpen; render(); break;
+    case 'obs-connect': obsConnect(); break;
+    case 'obs-reconnect': obsReconnect(); break;
+    case 'obs-disconnect': obsDisconnect(); break;
+    case 'obs-sync': obsSync(true); break;
+    case 'obs-load':
+      readRemote().then(r => {
+        if (!r) { toast('No Turn Meter data in this vault folder yet.'); return; }
+        if (sameProjects(r)) { toast('The vault already matches this browser.'); return; }
+        vault.pending = r; refreshObsUI();
+      });
+      break;
+    case 'obs-take':
+      if (vault.pending) {
+        state = normalize(vault.pending); vault.pending = null; vault.lastData = '';
+        save({ quiet: true }); applyTheme(); primeAlerts(); location.hash = ''; render();
+        toast(`Loaded ${plural(state.projects.length, 'project')} from the vault.`);
+        obsSync(false);
+      }
+      break;
+    case 'obs-keep': vault.pending = null; refreshObsUI(); obsSync(true); break;
+    case 'obs-send': if (p) obsSend(p); break;
     case 'backup-toggle': ui.backupOpen = !ui.backupOpen; ui.restorePending = null; ui.backupMsg = ''; render(); break;
     case 'copy-backup': copyBackup(); break;
     case 'ask-restore': askRestore(); break;
@@ -1122,6 +1431,11 @@ document.addEventListener('input', e => {
 
 document.addEventListener('change', e => {
   if (e.target.id === 'chime') { ensureAudio(); state.settings.chime = e.target.checked; save(); }
+  else if (e.target.id === 'obs-folder') {
+    obsCfg().folder = e.target.value.split('/').map(safeName).filter(Boolean).join('/') || 'Turn Meter';
+    e.target.value = obsCfg().folder; save(); refreshObsUI();
+  }
+  else if (e.target.id === 'obs-vault') { obsCfg().vault = e.target.value.trim(); save({ quiet: true }); }
 });
 
 document.addEventListener('keydown', e => {
@@ -1147,9 +1461,10 @@ window.addEventListener('storage', e => {
 /* ---------- Boot ---------- */
 applyTheme();
 primeAlerts();
-save();
+save({ quiet: true });
 render();
 setInterval(tick, 500);
+obsInit();
 })();
 </script>
 </body>
