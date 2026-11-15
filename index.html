@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one 720px column; white rounded cards on pale green-grey; the timer face with a 60-tick minute rail is the centrepiece */
+/* Layout: one 720px column; white rounded cards on pale green-grey; the timer face with a one-tick-per-minute rail is the centrepiece */
 :root{
   --paper:#F1F3EF; --card:#FFFFFF; --raise:#F7F9F5;
   --ink:#101613; --ink-2:#3C4742; --muted:#6B7871; --faint:#B4BEB8;
@@ -143,7 +143,7 @@ textarea.inp{ resize:vertical; min-height:64px; line-height:1.5 }
 .util{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:12px }
 .util-val{ font-family:var(--mono); font-size:22px; font-variant-numeric:tabular-nums }
 .util-of{ font-size:12.5px; color:var(--muted) }
-.split{ display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:3px }
+.split{ display:grid; grid-template-columns:repeat(var(--turns, 8), minmax(0,1fr)); gap:3px }
 .seg{ position:relative; height:7px; border-radius:999px; background:var(--line-2); overflow:hidden }
 .seg .fill{ position:absolute; inset:0 auto 0 0; width:0; border-radius:999px; background:var(--jade); transition:width .5s ease }
 .seg.paused .fill{ background:var(--amber) }
@@ -267,9 +267,11 @@ textarea.inp{ resize:vertical; min-height:64px; line-height:1.5 }
 (() => {
 'use strict';
 
-const MAX_TURNS = 5;
-const TURN_MS = 60 * 60 * 1000;
-const BUDGET_MS = MAX_TURNS * TURN_MS;
+const MAX_TURNS = 8;                   // turns per project
+const BUDGET_MS = 6 * 60 * 60 * 1000;  // 6 hours per project
+const TURN_MS = BUDGET_MS / MAX_TURNS; // 45 minutes per turn
+const TURN_MIN = Math.round(TURN_MS / 60000);
+const BUDGET_H = +(BUDGET_MS / 3600000).toFixed(2);
 const KEY = 'turn-meter.v1';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -568,7 +570,7 @@ function split(p) {
     const w = t ? Math.min(100, turnMs(t, n) / TURN_MS * 100) : 0;
     h += `<span class="${segCls(t, n)}" data-live="seg" data-pid="${p.id}" data-i="${i}"><span class="fill" style="width:${w}%"></span></span>`;
   }
-  return `<div class="split" role="img" aria-label="${esc(`${p.turns.length} of ${MAX_TURNS} turns, ${fmtClock(projectMs(p, n))} of 5 hours`)}">${h}</div>`;
+  return `<div class="split" style="--turns:${MAX_TURNS}" role="img" aria-label="${esc(`${p.turns.length} of ${MAX_TURNS} turns, ${fmtClock(projectMs(p, n))} of ${BUDGET_H} hours`)}">${h}</div>`;
 }
 
 function railKey(t, n) {
@@ -579,7 +581,7 @@ function railKey(t, n) {
 function railTicks(t, n) {
   const ms = t ? turnMs(t, n) : 0, mins = Math.floor(ms / 60000), over = ms > TURN_MS, run = t && isRunning(t);
   let h = '';
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < TURN_MIN; i++) {
     let c = 'tick';
     if (t && over) c += ' over';
     else if (t && i < mins) c += ' filled';
@@ -592,12 +594,19 @@ function railTicks(t, n) {
 function rail(p, t) {
   const n = now();
   return `<div class="rail" data-live="rail" ${t ? ids(p, t) : `data-pid="${p.id}"`} data-k="${railKey(t, n)}" aria-hidden="true">${railTicks(t, n)}</div>
-    <div class="rail-legend" aria-hidden="true"><span>0</span><span>15</span><span>30</span><span>45</span><span>60 min</span></div>`;
+    <div class="rail-legend" aria-hidden="true">${railMarks()}</div>`;
 }
 
+function railMarks() {
+  const step = TURN_MIN % 15 === 0 ? 15 : TURN_MIN % 10 === 0 ? 10 : TURN_MIN;
+  const marks = [];
+  for (let m = 0; m <= TURN_MIN; m += step) marks.push(m);
+  if (marks[marks.length - 1] !== TURN_MIN) marks.push(TURN_MIN);
+  return marks.map((m, i) => `<span>${m}${i === marks.length - 1 ? ' min' : ''}</span>`).join('');
+}
 function leftText(t, n) {
   const d = TURN_MS - turnMs(t, n);
-  return d >= 0 ? `${fmtClock(d)} left in this hour` : `${fmtClock(-d)} past the hour`;
+  return d >= 0 ? `${fmtClock(d)} left of this turn's ${TURN_MIN} min` : `${fmtClock(-d)} over this turn's ${TURN_MIN} min`;
 }
 
 function confirmBox(msg, action, attrs) {
@@ -700,7 +709,7 @@ function viewProject(p) {
   return `
     ${face(p)}
     <section class="sec">
-      <div class="sec-head"><span class="eyebrow">Project total</span><span class="eyebrow">5-hour budget</span></div>
+      <div class="sec-head"><span class="eyebrow">Project total</span><span class="eyebrow">${BUDGET_H}-hour budget</span></div>
       <div class="panel">
         <div class="util"><span class="util-val" data-live="proj-clock" ${ids(p)}>${fmtClock(total)}</span><span class="util-of">of ${fmtClock(BUDGET_MS)}</span></div>
         ${split(p)}
@@ -862,7 +871,7 @@ function renderChrome(r) {
   $('#topbar').innerHTML = r.view === 'project' && r.p.archived
     ? `<a class="mark" href="#">Turn Meter</a><a class="linkbtn" href="#past">← Past projects</a>`
     : r.view === 'home'
-      ? `<a class="mark" href="#">Turn Meter</a><span class="top-note">5 turns × 60 min</span>`
+      ? `<a class="mark" href="#">Turn Meter</a><span class="top-note">${MAX_TURNS} turns × ${TURN_MIN} min</span>`
       : `<a class="mark" href="#">Turn Meter</a><a class="linkbtn" href="#">← All projects</a>`;
   const run = findRunning();
   const show = !!run && !(r.view === 'project' && r.p === run.p);
@@ -879,7 +888,7 @@ function renderChrome(r) {
     <div class="theme" role="radiogroup" aria-label="Theme">
       ${opts.map(([k, label]) => `<button class="theme-btn${th === k ? ' on' : ''}" type="button" role="radio" aria-checked="${th === k}" aria-label="${label}" title="${label}" data-action="theme" data-theme-choice="${k}">${THEME_ICONS[k]}</button>`).join('')}
     </div>
-    <label class="check" for="chime"><input type="checkbox" id="chime"${state.settings.chime ? ' checked' : ''}> Chime at 60 minutes and at 5 hours</label>`;
+    <label class="check" for="chime"><input type="checkbox" id="chime"${state.settings.chime ? ' checked' : ''}> Chime at ${TURN_MIN} minutes and at ${BUDGET_H} hours</label>`;
 }
 function render() {
   const r = route();
@@ -989,11 +998,11 @@ function tick() {
     const i = run.p.turns.indexOf(run.t) + 1;
     if (turnMs(run.t) >= TURN_MS && !alerted.has(run.t.id + ':hour')) {
       alerted.add(run.t.id + ':hour'); chime();
-      toast(`${run.p.name}: turn ${i} reached 60 minutes.`);
+      toast(`${run.p.name}: turn ${i} reached ${TURN_MIN} minutes.`);
     }
     if (projectMs(run.p) >= BUDGET_MS && !alerted.has(run.p.id + ':budget')) {
       alerted.add(run.p.id + ':budget'); chime();
-      toast(`${run.p.name} reached the 5-hour budget.`);
+      toast(`${run.p.name} reached the ${BUDGET_H}-hour budget.`);
     }
   }
   updateTitle(run);
