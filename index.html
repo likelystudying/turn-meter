@@ -96,6 +96,7 @@ button,input,textarea{ font:inherit; color:inherit }
 .state{ font-weight:600; text-transform:uppercase; letter-spacing:.09em; font-size:10px; padding:6px 11px; border-radius:999px; background:var(--line-2); color:var(--muted); white-space:nowrap }
 .state.on{ background:var(--jade-soft); color:var(--jade) }
 .state.paused{ background:var(--amber-soft); color:var(--amber) }
+.clock-dec{ font-size:.42em; letter-spacing:-.01em; color:var(--muted) }
 .clock{ margin-top:8px; font-family:var(--mono); font-weight:500; font-size:clamp(44px, 13vw, 64px); font-variant-numeric:tabular-nums; letter-spacing:-.035em; line-height:1 }
 .clock.idle{ color:var(--faint) }
 .clock.over{ color:var(--flag) }
@@ -272,6 +273,7 @@ const BUDGET_MS = 6 * 60 * 60 * 1000;  // 6 hours per project
 const TURN_MS = BUDGET_MS / MAX_TURNS; // 45 minutes per turn
 const TURN_MIN = Math.round(TURN_MS / 60000);
 const BUDGET_H = +(BUDGET_MS / 3600000).toFixed(2);
+const FINISH_FROM = 5;                 // "Finish project" appears from this turn on
 const KEY = 'turn-meter.v1';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -297,6 +299,7 @@ function normalize(d) {
     p.desc = p.desc || '';
     p.createdAt = p.createdAt || now();
     p.archived = !!p.archived;
+    p.finished = !!p.finished;
     p.turns.forEach(t => {
       if (typeof t.id !== 'string' || !/^[a-z0-9-]+$/i.test(t.id)) t.id = uid();
       t.desc = t.desc || '';
@@ -383,6 +386,12 @@ function fmtClock(ms) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`;
 }
 const fmtDate = ts => new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+/* 5h 38m → { hm: '5:38', dec: '5.63' }; both come from the same rounded minute count. */
+function hoursOf(ms) {
+  const m = Math.round(Math.max(0, ms) / 60000);
+  return { hm: `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`, dec: (m / 60).toFixed(2) };
+}
+const fmtHD = ms => { const h = hoursOf(ms); return `${h.hm} (${h.dec})`; };
 const fmtTime = ts => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 function fmtDay(ts) {
   const d = new Date(ts), t = new Date(), y = new Date(); y.setDate(t.getDate() - 1);
@@ -515,7 +524,7 @@ function closeRunning(except) {
 function pausedNote(other) { if (other) toast(`Paused ${other.p.name}, turn ${other.p.turns.indexOf(other.t) + 1}.`); }
 
 function startTurn(p, desc) {
-  if (p.archived || p.turns.length >= MAX_TURNS || openTurn(p)) return;
+  if (p.archived || p.finished || p.turns.length >= MAX_TURNS || openTurn(p)) return;
   const other = closeRunning();
   p.turns.push({ id: uid(), desc: desc.trim(), createdAt: now(), done: false, manual: [], segments: [{ s: now(), e: null }] });
   ui.draftTurn = '';
@@ -523,7 +532,7 @@ function startTurn(p, desc) {
 }
 function pause(p, t) { if (!isRunning(t)) return; lastSeg(t).e = now(); save(); render(); }
 function resume(p, t) {
-  if (p.archived || t.done || isRunning(t)) return;
+  if (p.archived || p.finished || t.done || isRunning(t)) return;
   const other = closeRunning(t);
   t.segments.push({ s: now(), e: null });
   save(); render(); pausedNote(other);
@@ -545,7 +554,21 @@ function unarchive(p) {
   save(); render();
   toast(`${p.name} is back in current projects.`);
 }
-function reopen(p, t) { if (p.archived || openTurn(p)) return; t.done = false; delete t.finishedAt; save(); render(); }
+const canFinish = p => !p.archived && !p.finished && p.turns.length >= FINISH_FROM;
+function finishProject(p) {
+  if (!canFinish(p)) return;
+  const o = openTurn(p);
+  if (o) { if (isRunning(o)) lastSeg(o).e = now(); o.done = true; o.finishedAt = now(); }
+  p.finished = true; p.finishedAt = now();
+  save(); render();
+  toast(`${p.name} finished: ${fmtHD(projectMs(p))}`);
+}
+function unfinishProject(p) {
+  if (!p.finished) return;
+  p.finished = false; delete p.finishedAt;
+  save(); render(); toast(`${p.name} reopened.`);
+}
+function reopen(p, t) { if (p.archived || p.finished || openTurn(p)) return; t.done = false; delete t.finishedAt; save(); render(); }
 
 /* ---------- Pieces ---------- */
 function route() {
@@ -672,7 +695,8 @@ function newProjectForm(first, canCancel) {
 function projectCard(p) {
   const o = openTurn(p), n = p.turns.length;
   let meta, dot = '';
-  if (p.archived) meta = `Moved to past ${fmtDate(p.archivedAt || p.createdAt)} · ${n} of ${MAX_TURNS} turns`;
+  if (p.finished) meta = `Finished ${fmtDate(p.finishedAt || p.createdAt)} · ${plural(n, 'turn')}${p.archived ? ' · past' : ''}`;
+  else if (p.archived) meta = `Moved to past ${fmtDate(p.archivedAt || p.createdAt)} · ${n} of ${MAX_TURNS} turns`;
   else if (o) {
     const run = isRunning(o);
     dot = `<span class="dot${run ? '' : ' paused'}"></span>`;
@@ -683,7 +707,9 @@ function projectCard(p) {
   return `
     <li><a class="card" href="#p-${p.id}">
       <span><span class="card-name">${dot}${esc(p.name)}</span><span class="card-meta">${meta}</span></span>
-      <span><span class="card-amt" data-live="proj-clock" ${ids(p)}>${fmtClock(projectMs(p))}</span><span class="card-dur">of ${fmtClock(BUDGET_MS)}</span></span>
+      ${p.finished
+        ? `<span><span class="card-amt">${fmtHD(projectMs(p))}</span><span class="card-dur">h:mm (hours)</span></span>`
+        : `<span><span class="card-amt" data-live="proj-clock" ${ids(p)}>${fmtClock(projectMs(p))}</span><span class="card-dur">of ${fmtClock(BUDGET_MS)}</span></span>`}
       ${split(p)}
     </a></li>`;
 }
@@ -711,10 +737,14 @@ function viewProject(p) {
     <section class="sec">
       <div class="sec-head"><span class="eyebrow">Project total</span><span class="eyebrow">${BUDGET_H}-hour budget</span></div>
       <div class="panel">
-        <div class="util"><span class="util-val" data-live="proj-clock" ${ids(p)}>${fmtClock(total)}</span><span class="util-of">of ${fmtClock(BUDGET_MS)}</span></div>
+        ${p.finished
+          ? `<div class="util"><span class="util-val">${fmtHD(total)}</span><span class="util-of">of ${fmtHD(BUDGET_MS)}</span></div>`
+          : `<div class="util"><span class="util-val" data-live="proj-clock" ${ids(p)}>${fmtClock(total)}</span><span class="util-of">of ${fmtClock(BUDGET_MS)}</span></div>`}
         ${split(p)}
         <div class="legend">
-          <span data-live="proj-left" ${ids(p)} class="${left < 0 ? 'over' : ''}">${left >= 0 ? `${fmtClock(left)} left` : `${fmtClock(-left)} over budget`}</span>
+          ${p.finished
+            ? `<span class="${left < 0 ? 'over' : ''}">${left >= 0 ? `${fmtHD(left)} unused` : `${fmtHD(-left)} over budget`}</span>`
+            : `<span data-live="proj-left" ${ids(p)} class="${left < 0 ? 'over' : ''}">${left >= 0 ? `${fmtClock(left)} left` : `${fmtClock(-left)} over budget`}</span>`}
           <span>${plural(br.c, 'break')} · <span data-live="proj-break" ${ids(p)}>${fmtClock(br.ms)}</span></span>
         </div>
       </div>
@@ -740,14 +770,27 @@ function face(p) {
       <span class="state ${cls}">${pill}</span>
     </div>`;
 
+  const bigTotal = () => { const h = hoursOf(projectMs(p, n)); return `<div class="clock">${h.hm}<span class="clock-dec"> (${h.dec})</span></div>`; };
+  const finishBtn = canFinish(p) ? `<button class="btn" type="button" data-action="finish-project" ${ids(p)}>Finish project</button>` : '';
   if (p.archived) {
     return `
       <section class="face" aria-label="Past project">
-        ${top('Past', '')}
+        ${top(p.finished ? 'Finished · Past' : 'Past', '')}
         <div class="eyebrow">Total across ${plural(p.turns.length, 'turn')}</div>
-        <div class="clock">${fmtClock(projectMs(p, n))}</div>
+        ${p.finished ? bigTotal() : `<div class="clock">${fmtClock(projectMs(p, n))}</div>`}
         <div class="clock-note">Moved to past projects on ${fmtDate(p.archivedAt || n)}. Move it back to start or resume turns.</div>
         <div class="controls"><button class="btn primary" type="button" data-action="unarchive" ${ids(p)}>Move back to current projects</button></div>
+      </section>`;
+  }
+  if (p.finished) {
+    const h = hoursOf(projectMs(p, n));
+    return `
+      <section class="face" aria-label="Finished project">
+        ${top('Finished', 'on')}
+        <div class="eyebrow">Finished after ${plural(p.turns.length, 'turn')}</div>
+        ${bigTotal()}
+        <div class="clock-note">${h.hm.replace(':', ' h ')} min = ${h.dec} hours · finished ${fmtDate(p.finishedAt || n)}</div>
+        <div class="controls"><button class="btn" type="button" data-action="unfinish-project" ${ids(p)}>Reopen project</button></div>
       </section>`;
   }
   if (o) {
@@ -771,7 +814,9 @@ function face(p) {
             ? `<button class="btn" type="button" data-action="pause" ${ids(p, o)}>Pause</button>`
             : `<button class="btn primary" type="button" data-action="resume" ${ids(p, o)}>Resume</button>`}
           <button class="btn" type="button" data-action="finish" ${ids(p, o)}>Finish turn</button>
+          ${finishBtn}
         </div>
+        ${finishBtn ? `<p class="hint" style="margin-top:10px">Finish project ends turn ${i} and closes the project.</p>` : ''}
       </section>`;
   }
 
@@ -788,7 +833,7 @@ function face(p) {
           <label for="nt-desc">What will this turn cover?</label>
           <textarea class="inp" id="nt-desc" rows="2" placeholder="Wire up the pause button">${esc(ui.draftTurn)}</textarea>
         </div>
-        <div class="controls"><button class="btn primary" type="submit">Start turn ${i}</button></div>
+        <div class="controls"><button class="btn primary" type="submit">Start turn ${i}</button>${finishBtn}</div>
       </form>`;
   }
 
@@ -799,7 +844,7 @@ function face(p) {
       <div class="eyebrow">All ${MAX_TURNS} turns done</div>
       <div class="clock">${fmtClock(projectMs(p, n))}</div>
       <div class="clock-note">Total across ${MAX_TURNS} turns.</div>
-      <div class="controls"><button class="btn" type="button" data-action="reopen" ${ids(p, last)}>Reopen turn ${MAX_TURNS}</button></div>
+      <div class="controls">${finishBtn.replace('class="btn"', 'class="btn primary"')}<button class="btn" type="button" data-action="reopen" ${ids(p, last)}>Reopen turn ${MAX_TURNS}</button></div>
     </section>`;
 }
 
@@ -844,7 +889,7 @@ function turnRow(p, t, i) {
   }
 
   const links = [`<button class="linkbtn" type="button" data-action="edit-turn" ${ids(p, t)}>Edit</button>`];
-  if (!p.archived && t.done && i === p.turns.length - 1 && !openTurn(p)) links.push(`<button class="linkbtn" type="button" data-action="reopen" ${ids(p, t)}>Reopen</button>`);
+  if (!p.archived && !p.finished && t.done && i === p.turns.length - 1 && !openTurn(p)) links.push(`<button class="linkbtn" type="button" data-action="reopen" ${ids(p, t)}>Reopen</button>`);
   return `
     <div class="row">
       <div>
@@ -1049,6 +1094,7 @@ const hhmm = ts => { const d = new Date(ts); return `${String(d.getHours()).padS
 const stamp = ts => `${dayKey(ts)} ${hhmm(ts)}`;
 const stripUpd = x => String(x ?? '').replace(/^updated: .*$/m, '').replace(/Updated \d{4}-\d\d-\d\d \d\d:\d\d/g, '');
 function projectStatus(p) {
+  if (p.finished) return 'finished';
   if (p.archived) return 'past';
   const o = openTurn(p); if (o) return isRunning(o) ? 'running' : 'paused';
   return p.turns.length >= MAX_TURNS ? 'done' : p.turns.length ? 'idle' : 'not started';
@@ -1071,11 +1117,13 @@ function turnWhen(t) {
 function projectMd(p, n) {
   const total = projectMs(p, n), br = projectBreaks(p, n), left = BUDGET_MS - total;
   const L = ['---', 'tags:', '  - turn-meter', `project: ${JSON.stringify(p.name)}`, `status: ${projectStatus(p)}`,
-    `turns_used: ${p.turns.length}`, `turns_max: ${MAX_TURNS}`, `total: "${fmtClock(total)}"`, `total_hours: ${(total / HOUR).toFixed(2)}`,
+    `turns_used: ${p.turns.length}`, `turns_max: ${MAX_TURNS}`, `total: "${p.finished ? hoursOf(total).hm : fmtClock(total)}"`, `total_hours: ${hoursOf(total).dec}`, ...(p.finished ? [`finished: ${dayKey(p.finishedAt || n)}`] : []),
     `budget_hours: ${BUDGET_MS / HOUR}`, `breaks: "${fmtClock(br.ms)}"`, `started: ${dayKey(p.createdAt)}`, `updated: "${stamp(n)}"`, '---',
     `# ${p.name}`, ''];
   if (p.desc) L.push(p.desc, '');
-  L.push(`**Total** ${fmtClock(total)} of ${fmtClock(BUDGET_MS)} · **${left >= 0 ? 'Left' : 'Over'}** ${fmtClock(Math.abs(left))} · **Turns** ${p.turns.length} of ${MAX_TURNS} · **Breaks** ${br.c} (${fmtClock(br.ms)})`, '');
+  L.push(p.finished
+    ? `**Finished** ${dayKey(p.finishedAt || n)} · **Total** ${fmtHD(total)} · **Turns** ${p.turns.length} of ${MAX_TURNS} · **Breaks** ${br.c} (${fmtClock(br.ms)})`
+    : `**Total** ${fmtClock(total)} of ${fmtClock(BUDGET_MS)} · **${left >= 0 ? 'Left' : 'Over'}** ${fmtClock(Math.abs(left))} · **Turns** ${p.turns.length} of ${MAX_TURNS} · **Breaks** ${br.c} (${fmtClock(br.ms)})`, '');
   if (p.turns.length) {
     L.push('| Turn | When | Time | Breaks | What it was about |', '| ---: | --- | ---: | --- | --- |');
     p.turns.forEach((t, i) => {
@@ -1094,7 +1142,7 @@ function overviewMd(names, list, n) {
   const cur = list.filter(p => !p.archived), past = list.filter(p => p.archived);
   const total = list.reduce((a, p) => a + projectMs(p, n), 0);
   const table = ps => ps.length
-    ? ['| Project | Status | Turns | Time |', '| --- | --- | ---: | ---: |', ...ps.map(p => `| [[${names.get(p.id)}]] | ${projectStatus(p)} | ${p.turns.length} / ${MAX_TURNS} | ${fmtClock(projectMs(p, n))} |`)]
+    ? ['| Project | Status | Turns | Time |', '| --- | --- | ---: | ---: |', ...ps.map(p => `| [[${names.get(p.id)}]] | ${projectStatus(p)} | ${p.turns.length} / ${MAX_TURNS} | ${p.finished ? fmtHD(projectMs(p, n)) : fmtClock(projectMs(p, n))} |`)]
     : ['_None._'];
   const daily = dailyTotals(list, n), rows = []; let sum = 0;
   for (let i = 0; i < 14; i++) {
@@ -1319,6 +1367,8 @@ document.addEventListener('click', e => {
     case 'reopen': if (p && t) reopen(p, t); break;
     case 'archive': if (p) archive(p); break;
     case 'unarchive': if (p) unarchive(p); break;
+    case 'finish-project': if (p) finishProject(p); break;
+    case 'unfinish-project': if (p) unfinishProject(p); break;
     case 'edit-project': ui.editProject = true; ui.confirm = null; render(); $('#ep-name')?.focus(); break;
     case 'cancel-edit-project': ui.editProject = false; render(); break;
     case 'edit-turn': if (t) { ui.editTurn = t.id; ui.confirm = null; render(); $('#et-desc')?.focus(); } break;
@@ -1451,7 +1501,7 @@ document.addEventListener('keydown', e => {
   if (e.code !== 'Space' || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
   const tag = (e.target.tagName || '').toLowerCase();
   if (['input', 'textarea', 'select', 'button', 'a'].includes(tag) || e.target.isContentEditable) return;
-  const r = route(); if (r.view !== 'project' || r.p.archived) return;
+  const r = route(); if (r.view !== 'project' || r.p.archived || r.p.finished) return;
   const o = openTurn(r.p); if (!o) return;
   e.preventDefault(); ensureAudio();
   isRunning(o) ? pause(r.p, o) : resume(r.p, o);
